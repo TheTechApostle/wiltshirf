@@ -1,0 +1,42 @@
+<form id="sliderForm" enctype="multipart/form-data">
+  {% csrf_token %}
+  <div>
+      <label for="sliderText">Text:</label>
+      <input type="text" name="sliderText" id="sliderText" required>
+  </div>
+  <div>
+      <label for="sliderImage">Image:</label>
+      <input type="file" name="sliderImage" id="sliderImage" required>
+  </div>
+  <button type="submit">Upload</button>
+</form>
+
+<!-- Message box -->
+<div id="messageBox" style="margin-top: 10px; font-weight: bold;"></div>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $('#sliderForm').on('submit', function (e) {
+      e.preventDefault();
+
+      let formData = new FormData(this);
+
+      $.ajax({
+          type: 'POST',
+          url: '{% url "createSlider" %}',  // or hardcode URL if no name
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function (response) {
+              $('#messageBox').text(response.message).css('color', response.status === 'success' ? 'green' : 'red');
+              if (response.status === 'success') {
+                  $('#sliderForm')[0].reset(); // clear form
+              }
+          },
+          error: function () {
+              $('#messageBox').text('An error occurred.').css('color', 'red');
+          }
+      });
+  });
+</script>

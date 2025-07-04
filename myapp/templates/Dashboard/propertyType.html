@@ -1,0 +1,112 @@
+{% load static %}
+{% include  'Dashboard/header.html' %} 
+      <!--end::Header-->
+      <!--begin::Sidebar-->
+      
+      <!--end::Sidebar-->
+      <!--begin::App Main-->
+      <main class="app-main">
+        <!--begin::App Content Header-->
+        <div class="app-content-header">
+          <!--begin::Container-->
+          <div class="container-fluid">
+            <!--begin::Row-->
+            <div class="row">
+              <div class="col-sm-6"><h3 class="mb-0">General Form</h3></div>
+              <div class="col-sm-6">
+                <ol class="breadcrumb float-sm-end">
+                  <li class="breadcrumb-item"><a href="#">Home</a></li>
+                  <li class="breadcrumb-item active" aria-current="page">Property Listing</li>
+                </ol>
+              </div>
+            </div>
+            <!--end::Row-->
+          </div>
+          <!--end::Container-->
+        </div>
+        <!--end::App Content Header-->
+        <!--begin::App Content-->
+        <div class="app-content">
+          <!--begin::Container-->
+          <div class="container-fluid">
+            <!--begin::Row-->
+            <div class="row g-4">
+              <!--begin::Col-->
+              <div class="col-12">
+                <div class="callout callout-info">
+                  
+                  {% if messages %}
+                  {% for message in messages %}
+                    <div class="text-secondary">{{ message }}</div>
+                  {% endfor %}
+                {% endif %}
+                  </a>
+                </div>
+               
+
+              </div>
+              <!--end::Col-->
+              <!--begin::Col-->
+              <div class="col-md-6">
+                <!--begin::Quick Example-->
+                <div class="card card-primary card-outline mb-4">
+                  <!--begin::Header-->
+                 
+                </div>
+                  <!--end::Header-->
+                  <!--begin::Form-->
+                  <div class="container mt-5">
+                    
+                
+                    <div class="card shadow">
+                      <div class="card-header">
+                        <h4 class="mb-0">Add  Property Type</h4>
+                      </div>
+                      <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="card-body">
+                          
+                          <!-- Property Fields -->
+                          <div class="mb-3">
+                            {{ property_type_form.as_p }}
+                             
+                            </div>
+                          
+                        </div>
+                
+                        <div class="card-footer text-end">
+                          <button type="submit" class="btn btn-primary" name="AddProperty">Submit Property</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                  <!--end::Form-->
+                </div>
+                <!--end::Quick Example-->
+                <!--begin::Input Group-->
+                
+                <!--end::Input Group-->
+                <!--begin::Horizontal Form-->
+               
+              <!--end::Col-->
+              <!--begin::Col-->
+              <!-- Modal -->
+              
+
+                <fieldset class="form-">
+                  here ...
+                </fieldset>
+              <!--end::Col-->
+            
+          <!--end::Container-->
+        
+        <!--end::App Content-->
+      </main>
+      <!--end::App Main-->
+      <!--begin::Footer-->
+      
+{% include  'Dashboard/footer.html' %} 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Bootstrap JS (v4) -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
