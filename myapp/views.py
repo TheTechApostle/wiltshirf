@@ -24,7 +24,12 @@ from .utils import *
 from django.contrib.sessions.models import Session
 from django.db.models import Sum, Count
 from datetime import datetime
+import datetime
 from django.db.models import Q
+from calendar import month_name
+from datetime import datetime, timedelta
+from django.utils.timezone import now
+from collections import OrderedDict
 import csv
 from .utils import is_admin, is_client
 # Create your views here.
@@ -107,66 +112,72 @@ def propertyList(request):
     return render(request, 'Dashboard/property_list.html', context)
 
      
-
-@login_required(login_url='LoginUser')
+@login_required(login_url="LoginUser")
 def Dashboard(request):
+    getDate =  datetime.now().year
     Google_API_KEY = 'AIzaSyDQUDUVxVx_y7t5JvAHfVC_hYpgsHlU8Io'
     user = request.user
     userFirstname = user.first_name
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
 
-    # Initialize default values
     total_investment = 0
     to_balance = 0
     payment_progress = 0
     total_visitors = 0
     property_count = 0
-    properties = Property.objects.none()  # Default empty queryset
+    properties = Property.objects.none()
 
+    # Common filters
     if is_admin_user:
-        recent_payments = Transaction.objects.all().order_by('-created_at')[:5]  # Fetch latest 5
-        full_payment_history_url = reverse('payment_history')
-        # Admin sees all properties
+        recent_payments = Transaction.objects.all().order_by('-created_at')[:5]
         properties = Property.objects.all().order_by('-date_added')[:7]
-        property_count = properties.count()
-        
-        # Sum deposits and outstanding balances across all purchases
+        total_visitors = Session.objects.filter(expire_date__gte=datetime.now()).count()
         total_investment = PurchasedProduct.objects.aggregate(total=Sum('deposit'))['total'] or 0
         to_balance = PurchasedProduct.objects.aggregate(total=Sum('to_balance'))['total'] or 0
-
-        # Count active sessions (as proxy for visitors)
-        total_visitors = Session.objects.filter(expire_date__gte=datetime.now()).count()
-
-    elif is_client_user:
-        # Transaction History
-        recent_payments = Transaction.objects.filter(user=user).order_by('-created_at')[:5]  # Fetch latest 5
-        full_payment_history_url = reverse('payment_history')  # Define this URL in urls.py
-        # Client sees only their purchased property titles
+    else:
+        recent_payments = Transaction.objects.filter(user=user).order_by('-created_at')[:5]
         purchased_titles = PurchasedProduct.objects.filter(user=user).values_list('title', flat=True)
-
-        # Filter Property based on titles
         properties = Property.objects.prefetch_related('images').filter(title__in=purchased_titles).order_by('-date_added')[:5]
-        property_count = properties.count()
-
-        # Calculate investment and balance for this user
         total_investment = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('deposit'))['total'] or 0
         to_balance = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('to_balance'))['total'] or 0
         total_price = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('price'))['total'] or 0
-
-        # Calculate payment progress percentage
         if total_price and total_price > 0:
             payment_progress = round((total_investment / total_price) * 100, 2)
 
-    # Fetch user's transactions (if any)
+    full_payment_history_url = reverse('payment_history')
+    property_count = properties.count()
     transactions = Transaction.objects.filter(user=user).order_by('-created_at')
 
-    # Context passed to the template
+    # Chart Data: Last 6 months
+    labels = []
+    data = []
+
+    today = now()
+    for i in range(5, -1, -1):
+        target_date = today - timedelta(days=30 * i)
+        month_label = target_date.strftime('%b %Y')
+        labels.append(month_label)
+
+        if is_admin_user:
+            total = Transaction.objects.filter(
+                created_at__year=target_date.year,
+                created_at__month=target_date.month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+        else:
+            total = Transaction.objects.filter(
+                user=user,
+                created_at__year=target_date.year,
+                created_at__month=target_date.month
+            ).aggregate(total=Sum('amount'))['total'] or 0
+
+        data.append(round(total, 2))
+
     context = {
         'recent_payments': recent_payments,
         'full_payment_history_url': full_payment_history_url,
         'property': properties,
-        'GoogleAPIKEY':Google_API_KEY,
+        'getDate':getDate,
         'propertyCount': property_count,
         'user': user,
         'userFirstname': userFirstname,
@@ -177,39 +188,72 @@ def Dashboard(request):
         'payment_progress': payment_progress,
         'total_visitors': total_visitors,
         'transactions': transactions,
+        'GoogleAPIKEY': Google_API_KEY,
+        'chart_labels': labels,
+        'chart_data': data,
     }
 
     return render(request, 'Dashboard/index.html', context)
 
 
-@login_required
+
+# autocreate wallet
+@login_required(login_url="LoginUser")
+def wallet_view(request):
+    wallet = Wallet.objects.get(user=request.user)
+    return render(request, 'wallet.html', {'wallet': wallet})
+
+@login_required(login_url="LoginUser")
 def payment_history(request):
     user = request.user
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
 
-    # Filter by status if provided
     status_filter = request.GET.get('status')
+
+    # Filter the transactions
     queryset = Transaction.objects.all().order_by('-created_at') if is_admin_user else Transaction.objects.filter(user=user).order_by('-created_at')
 
     if status_filter:
         queryset = queryset.filter(status__iexact=status_filter)
 
-    # Export CSV
+    # Fetch amount paid and to_balance
+    if is_admin_user:
+        total_paid = PurchasedProduct.objects.aggregate(total=Sum('deposit'))['total'] or 0
+        total_balance = PurchasedProduct.objects.aggregate(total=Sum('to_balance'))['total'] or 0
+    else:
+        total_paid = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('deposit'))['total'] or 0
+        total_balance = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('to_balance'))['total'] or 0
+
+    # Payment progress
+    payment_progress = 0
+    total_price = total_paid + total_balance
+    if total_price > 0:
+        payment_progress = round((total_paid / total_price) * 100, 2)
+
+    # CSV Export
     if request.GET.get('export') == 'csv':
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename=payment_history.csv'
         writer = csv.writer(response)
-        writer.writerow(['Amount', 'Payment Type', 'Status', 'Reference', 'Date'])
+        writer.writerow(['Amount', 'User', 'Status', 'Reference', 'Date'])
 
         for t in queryset:
             writer.writerow([
                 t.amount,
-                t.user or '-',
+                t.user.username,
                 t.status,
                 t.reference or '-',
                 t.created_at.strftime('%Y-%m-%d %H:%M')
             ])
+
+        # Add summary
+        writer.writerow([])
+        writer.writerow(['Summary'])
+        writer.writerow(['Total Paid', total_paid])
+        writer.writerow(['Outstanding Balance', total_balance])
+        writer.writerow(['Payment Progress (%)', f"{payment_progress}%"])
+
         return response
 
     context = {
@@ -218,9 +262,11 @@ def payment_history(request):
         'is_admin': is_admin_user,
         'is_client': is_client_user,
         'status_filter': status_filter,
+        'total_paid': total_paid,
+        'total_balance': total_balance,
+        'payment_progress': payment_progress,
     }
     return render(request, 'Dashboard/payment_history.html', context)
-
 
 @login_required(login_url='LoginUser')  # Ensure the login URL name is correct
 def propertyList(request):

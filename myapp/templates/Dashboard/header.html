@@ -244,25 +244,29 @@
                     alt="User Image"
                   />
                   <p>
-                    Alexander Pierce - Web Developer
-                    <small>Member since Nov. 2023</small>
+                    {{ user.username }}
+                    {% if is_admin %}
+                      <small>Admin</small>                
+                    {% else %}
+                      <small>Active Client</small>
+                    {% endif %}
                   </p>
                 </li>
                 <!--end::User Image-->
                 <!--begin::Menu Body-->
                 <li class="user-body">
                   <!--begin::Row-->
-                  <div class="row">
+                  {% comment %} <div class="row">
                     <div class="col-4 text-center"><a href="#">Followers</a></div>
                     <div class="col-4 text-center"><a href="#">Sales</a></div>
                     <div class="col-4 text-center"><a href="#">Friends</a></div>
-                  </div>
+                  </div> {% endcomment %}
                   <!--end::Row-->
                 </li>
                 <!--end::Menu Body-->
                 <!--begin::Menu Footer-->
                 <li class="user-footer">
-                  <a href="#" class="btn btn-default btn-flat">Profile</a>
+                  <a href="#" class="btn btn-default btn-flat" data-bs-toggle="modal" data-bs-target="#profileModal">Profile</a>
                   {% if user.is_authenticated %}
                     <a href="{% url 'LogoutUser' %}"  class="btn btn-default btn-flat float-end">Sign out</a>
                   {% endif %}
@@ -818,3 +822,38 @@
             }
           }
       </script>
+      <!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">User Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <form>
+          {% comment %} <div class="mb-3">
+            <label for="fullName" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="fullName" value="{{ user.firstname }}">
+          </div>  {% endcomment %}
+          <div class="mb-3">
+            <label for="emailAddress" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="emailAddress" value="{{ user.email }}" readonly>
+          </div>
+          {% comment %} <div class="mb-3">
+            <label for="bio" class="form-label">Bio</label>
+            <textarea class="form-control" id="bio" rows="3">Address Here...</textarea>
+          </div> {% endcomment %}
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Update Profile</button>
+      </div>
+
+    </div>
+  </div>
+</div>
