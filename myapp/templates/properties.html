@@ -1,0 +1,252 @@
+{% load static %}
+{% include 'header.html' %}
+
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+<div class="container my-5">
+    <div class="text-center mx-auto mb-5 w-100 wow fadeInUp" data-wow-delay="0.1s">
+        <h1 class="mb-3">Explore Our Property Types</h1>
+        <p>Discover a diverse range of property options tailored to your needs. Whether you're looking to rent, buy, or invest — we’ve got the perfect match for your lifestyle and goals.</p>
+    </div>  
+  <!-- Tabs -->
+  <ul class="nav nav-pills justify-content-center mb-4" id="propertyTabs">
+    <li class="nav-item">
+      <a class="nav-link {% if not request.GET.plan %}active{% endif %}" href="?{% if request.GET.q %}q={{ request.GET.q }}&{% endif %}{% if request.GET.location %}location={{ request.GET.location }}&{% endif %}">All Properties</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if request.GET.plan == 'subscription' %}active{% endif %}" href="?plan=subscription{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}">Subscription Only</a>
+    </li>
+  </ul>
+
+  <!-- Search and Filters -->
+  <form method="get" class="mb-4">
+    <div class="row g-2 justify-content-center">
+      <div class="col-md-5">
+        <input type="text" name="q" class="form-control" placeholder="Search by title or location..." value="{{ request.GET.q }}">
+      </div>
+      <div class="col-md-3">
+        <select name="location" class="form-select">
+          <option value="">All Locations</option>
+          {% for loc in all_locations %}
+            <option value="{{ loc.id }}" {% if request.GET.location == loc.id|stringformat:"s" %}selected{% endif %}>{{ loc }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary w-100">Search</button>
+      </div>
+    </div>
+    {% if request.GET.plan %}
+      <input type="hidden" name="plan" value="{{ request.GET.plan }}">
+    {% endif %}
+  </form>
+
+  <!-- Property Cards -->
+  <div class="row g-4">
+    {% for property in properties %}
+      <div class="col-lg-4 col-md-6 col-sm-12">
+        <div class="property-card glass-effect h-100 d-flex flex-column">
+          
+          <!-- Swiper Slider -->
+          <div class="swiper-container swiper{{ forloop.counter }}">
+            <div class="swiper-wrapper">
+              {% for img in property.images.all %}
+                <div class="swiper-slide">
+                  <img src="{{ img.image.url }}" class="property-img img-fluid" alt="Image of {{ property.title }}">
+                </div>
+              {% empty %}
+                <div class="swiper-slide">
+                  <img src="{% static 'img/no-image.png' %}" class="property-img img-fluid" alt="No Image">
+                </div>
+              {% endfor %}
+            </div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-pagination"></div>
+          </div>
+
+          <!-- Property Details -->
+          <div class="card-body flex-grow-1 d-flex flex-column justify-content-between">
+            <div>
+              <h5 class="card-title fw-semibold">{{ property.title }}</h5>
+              <p class="card-text small text-muted">{{ property.description|truncatewords:20 }}</p>
+            </div>
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+              <span class="price fw-bold text-primary">₦{{ property.price|floatformat:2 }}</span>
+              <a href="{% url 'viewProperty' property.id %}" class="btn btn-outline-light btn-sm glow-button">View Details</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-center text-muted mt-4">No properties found.</p>
+    {% endfor %}
+  </div>
+
+  <!-- Pagination -->
+  {% if properties.has_other_pages %}
+    <nav class="mt-5 d-flex justify-content-center">
+      <ul class="pagination">
+        {% if properties.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ properties.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.plan %}&plan={{ request.GET.plan }}{% endif %}">«</a></li>
+        {% endif %}
+        {% for num in properties.paginator.page_range %}
+          {% if num >= properties.number|add:'-2' and num <= properties.number|add:'2' %}
+            {% if properties.number == num %}
+              <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% else %}
+              <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.plan %}&plan={{ request.GET.plan }}{% endif %}">{{ num }}</a></li>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+        {% if properties.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ properties.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.location %}&location={{ request.GET.location }}{% endif %}{% if request.GET.plan %}&plan={{ request.GET.plan }}{% endif %}">»</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+
+<!-- Swiper JS -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const sliders = document.querySelectorAll('.swiper-container');
+    sliders.forEach((el, index) => {
+      new Swiper(`.swiper${index + 1}`, {
+        loop: true,
+        grabCursor: true,
+        speed: 600,
+        pagination: {
+          el: `.swiper${index + 1} .swiper-pagination`,
+          clickable: true,
+        },
+        navigation: {
+          nextEl: `.swiper${index + 1} .swiper-button-next`,
+          prevEl: `.swiper${index + 1} .swiper-button-prev`,
+        },
+        autoplay: {
+          delay: 4000,
+          disableOnInteraction: false,
+        },
+        effect: 'coverflow',
+        coverflowEffect: {
+          rotate: 30,
+          stretch: 0,
+          depth: 100,
+          modifier: 1,
+          slideShadows: true,
+        },
+      });
+    });
+  });
+</script>
+
+<!-- Custom CSS -->
+<style>
+  .text-gradient {
+    background: linear-gradient(90deg, #606c38, #bc6c25);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .property-card {
+    border: none;
+    border-radius: 1rem;
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .property-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 48px rgba(97, 109, 57, 0.3);
+  }
+
+  .property-img {
+    height: 220px;
+    object-fit: cover;
+    width: 100%;
+    border-radius: 12px;
+  }
+
+  .swiper-container {
+    width: 100%;
+    height: 220px;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+  }
+
+  .swiper-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .card-body {
+    padding: 1rem 1.25rem;
+  }
+
+  .price {
+    font-size: 1.1rem;
+  }
+
+  .glow-button {
+    background: linear-gradient(90deg, #606c38, #bc6c25);
+    border: none;
+    color: #fff;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .glow-button:hover {
+    box-shadow: 0 0 15px rgba(188, 108, 37, 0.5);
+    transform: scale(1.05);
+  }
+
+  .pagination .page-link {
+    border-radius: 6px;
+    margin: 0 2px;
+  }
+
+  @media (max-width: 576px) {
+    .property-img, .swiper-container {
+      height: 180px;
+    }
+  }
+  <style>
+    .futuristic-tabs .nav-link {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ddd;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      border-radius: 40px;
+      padding: 0.6rem 1.2rem;
+      margin: 0 5px;
+      transition: all 0.3s ease-in-out;
+      box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.05);
+    }
+  
+    .futuristic-tabs .nav-link.active {
+      background: linear-gradient(135deg, #00f5ff, #0dcaf0);
+      color: #000;
+      box-shadow: 0 0 12px rgba(13, 202, 240, 0.7);
+      font-weight: 600;
+      border: 1px solid rgba(0, 255, 255, 0.4);
+      transform: scale(1.05);
+    }
+  
+    .futuristic-tabs .nav-link:hover {
+      color: #0dcaf0;
+      box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+  </style>
+  
+</style>
+
+{% include 'footer.html' %}

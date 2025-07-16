@@ -1,0 +1,85 @@
+{% load static %}
+{% include 'header.html' %}
+{% load customs_tags %}
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+<div class="container-xxl py-5">
+    <div class="container">
+        <div class="text-center mx-auto mb-5 w-100 wow fadeInUp" data-wow-delay="0.1s">
+            <h1 class="mb-3">Explore Our Property Types</h1>
+            <p>Discover a diverse range of property options tailored to your needs. Whether you're looking to rent, buy, or invest — we’ve got the perfect match for your lifestyle and goals.</p>
+        </div>                
+        <div class="row g-4">
+
+            <!-- Pills Navigation using property_types -->
+            <ul class="nav nav-pills d-inline-flex justify-content-end mb-5">
+              {% for type in property_types %}
+                <li class="nav-item me-2">
+                  <a class="btn btn-outline-primary {% if forloop.first %}active{% endif %}" data-bs-toggle="pill" href="#tab-{{ forloop.counter }}">
+                    {{ type.name }}
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          
+            <!-- Tab Content -->
+            <div class="tab-content">
+              {% for type in property_types %}
+                <div id="tab-{{ forloop.counter }}" class="tab-pane fade show p-0 {% if forloop.first %}active{% endif %}">
+                  <div class="row g-4">
+                    {% for x in grouped_properties|get_item:type.name %}
+                      <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.1s">
+                        <div class="property-item rounded overflow-hidden">
+                          <div class="position-relative overflow-hidden">
+                            <a href="#">
+                              {% with x.images.first as first_image %}
+                                {% if first_image %}
+                                  <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ first_image.label }}" style="height:230px;">
+                                {% else %}
+                                  <img src="{% static 'img/default-property.jpg' %}" class="card-img-top" alt="No image available">
+                                {% endif %}
+                              {% endwith %}
+                            </a>
+                            <div class="bg-primary rounded text-white position-absolute start-0 top-0 m-4 py-1 px-3">{{ x.property_type }}</div>
+                          </div>
+                          <div class="p-4 pb-0">
+                            <h5 class="text-primary mb-3"><strong>₦{{ x.price }}</strong></h5>
+                            <a class="d-block h5 mb-2" href="#">{{ x.title }}</a>
+                            <p>
+                              <i class="fa fa-map-marker-alt text-primary me-2"></i>{{ x.location }}
+                              <span class="bg-primary float-end px-2 rounded">
+                                <a href="{% url 'viewProperty' x.id %}" class="text-white">View Property</a>
+                              </span>
+                            </p>
+                          </div>
+                          <div class="d-flex border-top">
+                            <small class="flex-fill text-center border-end py-2">
+                              <i class="fa fa-concierge-bell {% if x.allSubscription == 'Yes' %}text-primary{% else %}text-danger{% endif %} me-2"></i>
+                              {{ x.allSubscription }}
+                            </small>
+                            <small class="flex-fill text-center border-end py-2">
+                              <i class="fa fa-bell text-danger me-2"></i>{{ x.property_status }}
+                            </small>
+                            <small class="flex-fill text-center py-2">
+                              <i class="fa fa-calendar text-primary me-2"></i>{{ x.date_added|date:"F j, Y" }}
+                            </small>
+                          </div>
+                        </div>
+                      </div>
+                    {% empty %}
+                      <div class="col-12 text-center">
+                        <p class="text-muted">No properties listed for "{{ type.name }}"</p>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          
+          </div>
+          
+    </div>
+</div>
+
+{% include 'footer.html' %}

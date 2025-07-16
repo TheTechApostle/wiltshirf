@@ -88,7 +88,7 @@
       
             <!-- About -->
             <li class="nav-item">
-              <a class="nav-link text-primary" href="about.html"><i class="fas fa-info-circle me-1"></i> About Us</a>
+              <a class="nav-link text-primary" href="{% url 'about' %}"><i class="fas fa-info-circle me-1"></i> About Us</a>
             </li>
       
             <!-- Properties Dropdown -->
@@ -99,28 +99,22 @@
               </a>
               <ul class="dropdown-menu shadow border-0 rounded-3 animate__animated animate__fadeIn"
                   aria-labelledby="propertiesDropdown">
-                <li><a class="dropdown-item" href="property-list.html"><i class="fas fa-list me-2 text-primary"></i> Property Listings</a></li>
-                <li><a class="dropdown-item" href="property-type.html"><i class="fas fa-th-large me-2 text-primary"></i> Property Types</a></li>
+                <li><a class="dropdown-item" href="{% url 'property_lists' %}"><i class="fas fa-list me-2 text-primary"></i> Property Listings</a></li>
+                <li><a class="dropdown-item" href="{% url 'PropertyTypeHome' %}"><i class="fas fa-th-large me-2 text-primary"></i> Property Types</a></li>
                 <li><a class="dropdown-item" href="property-agent.html"><i class="fas fa-user-tie me-2 text-primary"></i> Our Agents</a></li>
               </ul>
             </li>
       
             <!-- Pages Dropdown -->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle text-primary" href="#" id="pagesDropdown" role="button"
-                 data-bs-toggle="dropdown" aria-expanded="false">
+            <li class="nav-item">
+              <a class="nav-link" href="">
                 <i class="fas fa-copy me-1"></i> Services
               </a>
-              <ul class="dropdown-menu shadow border-0 rounded-3 animate__animated animate__fadeIn"
-                  aria-labelledby="pagesDropdown">
-                <li><a class="dropdown-item" href="testimonial.html"><i class="fas fa-comments me-2 text-primary"></i> Testimonials</a></li>
-                <li><a class="dropdown-item" href="404.html"><i class="fas fa-exclamation-circle me-2 text-danger"></i> 404 Error</a></li>
-              </ul>
             </li>
       
             <!-- Contact -->
             <li class="nav-item">
-              <a class="nav-link text-primary" href="contact.html"><i class="fas fa-envelope me-1"></i> Contact</a>
+              <a class="nav-link text-primary" href=""><i class="fas fa-envelope me-1"></i> Contact</a>
             </li>
             <!-- Cart Icon (usually in your navbar/header) -->
             <li class="nav-item position-relative">

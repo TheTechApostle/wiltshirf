@@ -465,7 +465,7 @@ def propertyType(request):
 
 
 def property_list(request):
-    properties = property.objects.prefetch_related('images').all()
+    properties = Property.objects.prefetch_related('images').all()
     return render(request, 'Dashboard/property_list.html', {'propertyView':properties})
 
 
@@ -839,3 +839,81 @@ def my_orders(request):
     orders = PurchasedProduct.objects.filter(user=request.user).order_by('-date_added')
     
     return render(request, 'Dashboard/my_orders.html', {'orders': orders, 'is_client':is_client_user, 'user_username':username})
+
+
+
+from django.utils import timezone
+def property_lists(request):
+    query = request.GET.get("q", "")
+    plan = request.GET.get("plan", "")
+    location = request.GET.get("location", "")
+    min_price = request.GET.get("min_price", "")
+    max_price = request.GET.get("max_price", "")
+
+    properties = Property.objects.all()
+
+    if query:
+        properties = properties.filter(
+            Q(title__icontains=query) |
+            Q(location__city__icontains=query) |
+            Q(location__state__icontains=query) |
+            Q(location__address__icontains=query)
+        )
+
+
+    if plan == "subscription":
+        properties = properties.filter(allSubscription='Yes')
+
+    if location:
+        properties = properties.filter(location__id=location)
+
+    if min_price:
+        properties = properties.filter(price__gte=min_price)
+
+    if max_price:
+        properties = properties.filter(price__lte=max_price)
+
+    paginator = Paginator(properties, 15)
+    page = request.GET.get("page")
+    properties = paginator.get_page(page)
+
+    all_locations = Location.objects.order_by('state').distinct()
+
+    return render(request, "properties.html", {
+        "properties": properties,
+        "all_locations": all_locations,
+        "now": timezone.now(),
+    })
+
+def PropertyTypeHome(request):
+    getSlider = SliderImages.objects.all()
+    getAgent = Agent.objects.all()
+    ClientTestimonies = ClientTestimony.objects.all()
+    getPropertyLocation = Location.objects.all().distinct()
+
+    # Property type list & count
+    property_types = PropertyType.objects.all()
+    getPropertyCount = property_types.annotate(property_count=Count('property'))
+
+    # Group properties by type with related images
+    grouped_properties = OrderedDict()
+    for prop_type in property_types:
+        properties = Property.objects.filter(
+            property_type=prop_type
+        ).prefetch_related(
+            Prefetch('images', queryset=PropertyImage.objects.all())
+        )
+        grouped_properties[prop_type.name] = properties
+
+    context = {
+        'getSliders': getSlider,
+        'ClientTestimonies': ClientTestimonies,
+        'getPropertyLocation': getPropertyLocation,
+        'getPropertyType': getPropertyCount,
+        'getPropertyType_': property_types,
+        'grouped_properties': grouped_properties,
+        'property_types': property_types,
+        'getAgent': getAgent
+    }
+
+    return render(request, 'PropertyTypeHome.html', context)

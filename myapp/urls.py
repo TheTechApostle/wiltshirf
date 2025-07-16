@@ -5,6 +5,9 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path('', views.myHome, name="myHome"),
     path('about/', views.about, name="about"),
+    path('properties/', views.property_lists, name='property_lists'),
+    path('PropertyTypeHome/', views.PropertyTypeHome, name='PropertyTypeHome'),
+    path('property_list/', views.property_list, name='property_list'),
     path('createSlider/', views.createSlider, name="createSlider"),
     # path('property_list/', views.property_list_view, name="property_list"),
     path('Dashboard/', views.Dashboard, name="Dashboard"),
