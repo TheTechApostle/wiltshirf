@@ -29,6 +29,9 @@ urlpatterns = [
     path('Dashboard/property_list/', views.propertyList, name='propertyList'),
     path('logout/', views.custom_logout_view, name='LogoutUser'),
     path('Dashboard/payment-history/', views.payment_history, name='payment_history'),
+    path('Dashboard/wallet/', views.initiate_wallet_payment, name='initiate_wallet_payment'),
+    path('Dashboard/walletsuccess/', views.verify_wallet_payment, name='verify_wallet_payment'),
+
 
 
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),

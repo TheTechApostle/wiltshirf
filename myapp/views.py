@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from .models import *
+import uuid
 from django.http import JsonResponse
 from django.db.models import Count, Prefetch
 from .forms import *
@@ -31,6 +32,7 @@ from datetime import datetime, timedelta
 from django.utils.timezone import now
 from collections import OrderedDict
 import csv
+from django.views.decorators.csrf import csrf_exempt
 from .utils import is_admin, is_client
 # Create your views here.
 
@@ -198,10 +200,80 @@ def Dashboard(request):
 
 
 # autocreate wallet
-@login_required(login_url="LoginUser")
-def wallet_view(request):
+# @login_required(login_url="LoginUser")
+# def wallet_view(request):
+#     wallet = Wallet.objects.get(user=request.user)
+#     return render(request, 'Dashboard/wallet.html', {'wallet': wallet})
+
+
+@login_required
+def initiate_wallet_payment(request):
     wallet = Wallet.objects.get(user=request.user)
-    return render(request, 'wallet.html', {'wallet': wallet})
+    callableUrl = request.build_absolute_uri(reverse('verify_wallet_payment'))
+    if request.method == 'POST':
+        amount = int(request.POST.get('amount')) * 100  # Paystack takes in kobo
+        reference = str(uuid.uuid4())
+        email = request.user.email
+
+        # Create transaction record
+        WalletTransaction.objects.create(user=request.user, amount=amount/100, reference=reference)
+
+        headers = {
+            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+            "Content-Type": "application/json",
+        }
+        
+        data = {
+            "email": email,
+            "amount": amount,
+            "reference": reference,
+            "callback_url": callableUrl,
+        }
+
+        response = requests.post('https://api.paystack.co/transaction/initialize', json=data, headers=headers)
+        res_data = response.json()
+
+        if res_data['status']:
+            return redirect(res_data['data']['authorization_url'])
+        else:
+            return render(request, 'error.html', {'message': 'Paystack Initialization Failed'})
+    context = {'wallet':wallet}
+
+    return render(request, 'Dashboard/wallet.html', context)
+
+
+@login_required(login_url="LoginUser")
+@csrf_exempt
+def verify_wallet_payment(request):
+    reference = request.GET.get('reference')
+
+    if not reference:
+        return render(request, 'error.html', {'message': 'Invalid reference'})
+
+    headers = {
+        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+    }
+
+    url = f"https://api.paystack.co/transaction/verify/{reference}"
+    response = requests.get(url, headers=headers)
+    res_data = response.json()
+
+    if res_data['status'] and res_data['data']['status'] == 'success':
+        trans = WalletTransaction.objects.get(reference=reference)
+
+        if not trans.verified:
+            trans.verified = True
+            trans.save()
+
+            # Credit wallet
+            wallet, created = Wallet.objects.get_or_create(user=trans.user)
+            wallet.balance += trans.amount
+            wallet.save()
+
+        return render(request, 'Dashboard/walletsuccess.html', {'amount': trans.amount})
+    else:
+        return render(request, 'Dashboard/wallet.html', {'message': 'Verification Failed'})
+
 
 @login_required(login_url="LoginUser")
 def payment_history(request):

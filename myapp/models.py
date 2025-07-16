@@ -235,3 +235,14 @@ class Wallet(models.Model):
 
     def __str__(self):
         return f"{self.user.username}'s Wallet: ₦{self.balance}"
+    
+
+class WalletTransaction(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reference = models.CharField(max_length=100, unique=True)
+    verified = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"₦{self.amount} - {self.reference}"
