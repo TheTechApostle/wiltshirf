@@ -125,6 +125,8 @@ def Dashboard(request):
     properties = Property.objects.none()  # Default empty queryset
 
     if is_admin_user:
+        recent_payments = Transaction.objects.all().order_by('-created_at')[:5]  # Fetch latest 5
+        full_payment_history_url = reverse('payment_history')
         # Admin sees all properties
         properties = Property.objects.all().order_by('-date_added')[:7]
         property_count = properties.count()
@@ -203,7 +205,7 @@ def payment_history(request):
         for t in queryset:
             writer.writerow([
                 t.amount,
-                t.payment_type or '-',
+                t.user or '-',
                 t.status,
                 t.reference or '-',
                 t.created_at.strftime('%Y-%m-%d %H:%M')
@@ -438,7 +440,7 @@ def LoginUser(request):
             # validate by next_url
             if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
                 return redirect(next_url)   
-            return redirect("index")
+            return redirect("Dashboard")
         else:
             messages.warning(request, 'Authentication Failed..., Username or Password Error')
             context = {'form':form, 'next': next_url}

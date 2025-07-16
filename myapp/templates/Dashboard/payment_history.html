@@ -43,7 +43,9 @@
               <tr>
                 <th>#</th>
                 <th>Amount</th>
-                <th>Payment Type</th>
+                {% if is_admin %}
+                <th>User</th>
+                {% endif %}
                 <th>Status</th>
                 <th>Reference</th>
                 <th>Date</th>
@@ -54,7 +56,9 @@
               <tr>
                 <td>{{ forloop.counter }}</td>
                 <td class="text-success fw-bold">₦{{ payment.amount|floatformat:2 }}</td>
-                <td>{{ payment.payment_type|default:"-" }}</td>
+                {% if is_admin %}
+                <td>{{ payment.user|default:"-" }}</td>
+                {% endif %}
                 <td>
                   {% if payment.status == 'success' %}
                     <span class="badge bg-success">Success</span>

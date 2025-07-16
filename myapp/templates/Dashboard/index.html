@@ -228,7 +228,7 @@
                           <li class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                               <strong>₦{{ payment.amount|floatformat:2 }}</strong><br>
-                              <small class="text-muted">{{ payment.created_at|date:"M d, Y - H:i a" }}</small>
+                              <small class="text-muted"><span class='text-primary'>({{payment.user}})</span> - {{ payment.created_at|date:"M d, Y - H:i a" }}</small>
                             </div>
                             <span class="badge bg-success">Paid</span>
                           </li>
@@ -239,7 +239,9 @@
                     {% endif %}
                   </div>
                   <div class="card-footer text-center bg-white">
+                    {% if is_client %}
                     <a href="" class="btn btn-outline-primary btn-sm">Fund Wallet</a>
+                    {% endif %}
                     <a href="{% url 'payment_history'%}" class="btn btn-outline-primary btn-sm">View Full Payment History</a>
                   </div>
                 </div>
