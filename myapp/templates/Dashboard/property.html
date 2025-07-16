@@ -51,18 +51,42 @@
                 <!--begin::Quick Example-->
                 <div class="card card-primary card-outline mb-4">
                   <!--begin::Header-->
-                  <div class="card-header"><div class="card-title">Propety Form</div></div>
+                  <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                  <div class="card-header">
+                    <div class="card-title">Propety Form</div>
+                    <!-- Hidden Django select field -->
+                      
+                  </div>
                   <!--end::Header-->
                   <!--begin::Form-->
-                  <div class="container mt-5">
+                  <div class="container mt-1">
                     
                 
                     <div class="card shadow">
-                      <div class="card-header">
+                      <div class="card-header d-flex justify-content-between align-items-end">
+                        <!-- Left Title -->
                         <h4 class="mb-0">Add New Property</h4>
+                      
+                        <!-- Right Side Toggle (aligned to bottom) -->
+                        <div class="d-flex flex-column align-items-end">
+                          <!-- Hidden select -->
+                          {{ form.allSubscription }}
+                      
+                          <!-- Label -->
+                          <sup class="d-block mb-1 text-muted">Allow Subscription</sup>
+                      
+                          <!-- Toggle buttons -->
+                          <div class="btn-group float-end" role="group" aria-label="Subscription Toggle">
+                            <button type="button" class="btn btn-outline-primary" id="btn-on">On</button>
+                            <button type="button" class="btn btn-outline-secondary" id="btn-off">Off</button>
+                          </div>
+                        </div>
                       </div>
-                      <form method="POST" enctype="multipart/form-data">
-                        {% csrf_token %}
+                      
+                      
+                      
+                      
                         <div class="card-body">
                           
                           <!-- Property Fields -->
@@ -111,6 +135,13 @@
                             {{ form.location }}
                             {% if form.location.errors %}
                               <div class="text-danger">{{ form.location.errors.0 }}</div>
+                            {% endif %}
+                          </div>
+                          <div class="mb-3">
+                            {{ form.property_status.label_tag }}
+                            {{ form.property_status }}
+                            {% if form.property_status.errors %}
+                              <div class="text-danger">{{ form.property_status.errors.0 }}</div>
                             {% endif %}
                           </div>
                 
@@ -170,6 +201,69 @@
       
 {% include  'Dashboard/footer.html' %} 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <!-- CSS Styling -->
+<style>
+  .btn-group .btn {
+    width: 60px;
+    transition: all 0.3s ease;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  
+  .btn-group .btn.active {
+    color: #fff;
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+  }
+  
+  .btn-group .btn:not(.active) {
+    background-color: #f8f9fa;
+    color: #333;
+    border-color: #ced4da;
+  }
+  
+  .btn-group .btn:hover {
+    opacity: 0.9;
+  }
+  </style>
+  
+  <!-- JavaScript Logic -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const select = document.getElementById('subscriptionToggle');
+    const btnOn = document.getElementById('btn-on');
+    const btnOff = document.getElementById('btn-off');
+  
+    function updateButtons(value) {
+      if (value === "Yes") {
+        btnOn.classList.add('active', 'btn-primary');
+        btnOn.classList.remove('btn-outline-primary');
+        btnOff.classList.remove('active', 'btn-primary');
+        btnOff.classList.add('btn-outline-secondary');
+      } else {
+        btnOff.classList.add('active', 'btn-primary');
+        btnOff.classList.remove('btn-outline-secondary');
+        btnOn.classList.remove('active', 'btn-primary');
+        btnOn.classList.add('btn-outline-primary');
+      }
+    }
+  
+    // Set initial state
+    updateButtons(select.value);
+  
+    btnOn.addEventListener('click', () => {
+      select.value = "Yes";
+      updateButtons("Yes");
+    });
+  
+    btnOff.addEventListener('click', () => {
+      select.value = "No";
+      updateButtons("No");
+    });
+  });
+  </script>
+
 
 <!-- Bootstrap JS (v4) -->
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

@@ -28,6 +28,7 @@
       integrity="sha256-tXJfXfp6Ewt1ilPzLDtQnJV4hclT9XuaZUKyUvmyr+Q="
       crossorigin="anonymous"
     />
+    <script src="https://cdn.tailwindcss.com"></script>
     <!--end::Fonts-->
     <!--begin::Third Party Plugin(OverlayScrollbars)-->
     <link
@@ -220,13 +221,19 @@
             <!--end::Fullscreen Toggle-->
             <!--begin::User Menu Dropdown-->
             <li class="nav-item dropdown user-menu">
-              <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
+              <a href="#" class="nav-link dropdown-toggle flex" data-bs-toggle="dropdown">
                 <img
                   src="{% static 'dist/assets/img/user2-160x160.jpg' %}"
                   class="user-image rounded-circle shadow"
                   alt="User Image"
                 />
-                <span class="d-none d-md-inline">Alexander Pierce</span>
+                {% if user.is_authenticated %}
+                  <span class="d-none d-md-inline">
+                    {{ user_username }}
+                  </span>
+                {% endif %}
+
+              
               </a>
               <ul class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
                 <!--begin::User Image-->
@@ -256,7 +263,10 @@
                 <!--begin::Menu Footer-->
                 <li class="user-footer">
                   <a href="#" class="btn btn-default btn-flat">Profile</a>
-                  <a href="#" class="btn btn-default btn-flat float-end">Sign out</a>
+                  {% if user.is_authenticated %}
+                    <a href="{% url 'LogoutUser' %}"  class="btn btn-default btn-flat float-end">Sign out</a>
+                  {% endif %}
+                  
                 </li>
                 <!--end::Menu Footer-->
               </ul>
@@ -274,7 +284,7 @@
           <a href="#" class="brand-link">
             <!--begin::Brand Image-->
             <img
-              src="{% static '../img/Wiltshire-01.jpg' %}"
+              src="{% static 'img/Wiltshire-01.jpg' %}"
               alt=""
               class="brand-image opacity-75 shadow"
             />
@@ -297,14 +307,14 @@
               data-accordion="false"
             >
               <li class="nav-item">
-                <a href="#" class="nav-link">
+                <a href="{% url 'Dashboard' %}" class="nav-link">
                   <i class="nav-icon bi bi-speedometer"></i>
                   <p>
                     Dashboard
                     <i class="nav-arrow bi bi-chevron-right"></i>
                   </p>
                 </a>
-                <ul class="nav nav-treeview">
+                {% comment %} <ul class="nav nav-treeview">
                   <li class="nav-item">
                     <a href="../index.html" class="nav-link">
                       <i class="nav-icon bi bi-circle"></i>
@@ -323,7 +333,7 @@
                       <p>Dashboard v3</p>
                     </a>
                   </li>
-                </ul>
+                </ul> {% endcomment %}
               </li>
               <li class="nav-item">
                 <a href="../generate/theme.html" class="nav-link">
@@ -461,62 +471,90 @@
                   </li>
                 </ul>
               </li>
-              <li class="nav-item menu-open">
-                <a href="#" class="nav-link active">
-                  <i class="nav-icon bi bi-pencil-square"></i>
-                  <p>
-                    Forms
-                    <i class="nav-arrow bi bi-chevron-right"></i>
-                  </p>
-                </a>
-                <ul class="nav nav-treeview">
+              {% if is_admin %}
+              <li class="nav-item">
+                <!-- Toggle Button -->
+                 <div class="flex">
+                  <i class="nav-icon bi bi-pencil-square ml-4 text-white"></i>
+                  <button class="nav-link w-full d-flex justify-content-between align-items-center" id="getOpen" onclick="TheFormOpen()">
+                    <span>
+                      
+                      Forms
+                    </span>
+                    <i class="nav-arrow bi bi-chevron-right"  style="float:right"></i>
+                  </button>
+                </div>
+                <!-- Hidden Dropdown Menu -->
+                
+                <ul class="nav nav-treeview ms-3" id="show" style="display: none;">
                   <li class="nav-item">
-                    <a href="{% url 'FormProperty' %}" class="nav-link {% if request.resolver_match.url_name == 'FormProperty' %} active {% endif %}">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Add Property</p>
+                    <a href="{% url 'FormProperty' %}" class="nav-link {% if request.resolver_match.url_name == 'FormProperty' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> Add Property
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="{% url 'FormPropertyType' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyType' %} active {% endif %}">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Add Property Type</p>
+                    <a href="{% url 'FormPropertyType' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyType' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> Add Property Type
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="{% url 'FormPropertyLocation' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyLocation' %} active {% endif %}">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Add Location</p>
+                    <a href="{% url 'FormPropertyLocation' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyLocation' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> Add Location
                     </a>
                   </li>
                   <li class="nav-item">
-                    <a href="{% url 'add_agent' %}" class="nav-link {% if request.resolver_match.url_name == 'add_agent' %} active {% endif %}">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Add Property Agent</p>
-                    </a>
-                  </li>
-                  <li class="nav-item">
-                    <a href="{% url 'clientTestimony' %}" class="nav-link {% if request.resolver_match.url_name == 'clientTestimony' %} active {% endif %}">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Add Client Testimony</p>
+                    <a href="{% url 'add_agent' %}" class="nav-link {% if request.resolver_match.url_name == 'add_agent' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> Add Property Agent
                     </a>
                   </li>
                 </ul>
+                
               </li>
+              {% endif %}
+              <!-- JavaScript -->
+              
+              
               <li class="nav-item">
-                <a href="#" class="nav-link">
-                  <i class="nav-icon bi bi-table"></i>
-                  <p>
-                    Tables
-                    <i class="nav-arrow bi bi-chevron-right"></i>
-                  </p>
-                </a>
-                <ul class="nav nav-treeview">
+                <!-- Toggle Button -->
+                 <div class="flex">
+                  <i class="nav-icon bi bi-table ml-4 text-white"></i>
+                  <button class="nav-link w-full d-flex justify-content-between align-items-center" id="getOpen" onclick="TheTableOpen()">
+                    <span>
+                      
+                      Tables
+                    </span>
+                    <i class="nav-arrow bi bi-chevron-right"  style="float:right"></i>
+                  </button>
+                </div>
+                <!-- Hidden Dropdown Menu -->
+                <ul class="nav nav-treeview ms-3" id="showTable" style="display: none;">
                   <li class="nav-item">
-                    <a href="../tables/simple.html" class="nav-link">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Simple Tables</p>
+                    <a href="{% url 'propertyList' %}" class="nav-link {% if request.resolver_match.url_name == 'propertyList' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> View Property
                     </a>
                   </li>
+                  <li class="nav-item">
+                    <a href="{% url 'FormPropertyType' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyType' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> View Property Type
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{% url 'FormPropertyLocation' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyLocation' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> View Property Location
+                    </a>
+                  </li>
+                  <li class="nav-item">
+                    <a href="{% url 'add_agent' %}" class="nav-link {% if request.resolver_match.url_name == 'add_agent' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> View Property Plan
+                    </a>
+                  </li>
+                  {% if is_client %}
+                  <li class="nav-item">
+                    <a href="{% url 'my_orders' %}" class="nav-link {% if request.resolver_match.url_name == 'my_orders' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> View My Orders
+                    </a>
+                  </li>
+                  {% endif %}
                 </ul>
               </li>
               <li class="nav-header">EXAMPLES</li>
@@ -757,3 +795,26 @@
         <!--end::Sidebar Wrapper-->
       </aside>
       <!--end::Header-->
+      <style>
+        #show, #showTable{
+          display:none;
+        }
+      </style>
+      <script>
+          function TheFormOpen(){
+            var x = document.getElementById('show')
+            if(x.style.display==='none'){
+              x.style.display ='block'
+            }else{
+              x.style.display='none'
+            }
+          }
+          function TheTableOpen(){
+            var x =  document.getElementById('showTable')
+            if(x.style.display==='none'){
+              x.style.display='block'
+            }else{
+              x.style.display='none'
+            }
+          }
+      </script>

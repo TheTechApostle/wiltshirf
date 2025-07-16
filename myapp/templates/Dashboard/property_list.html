@@ -1,0 +1,73 @@
+{% load static %}
+{% include 'Dashboard/header.html' %}
+
+<div class="container py-5">
+  <div class="col-12">
+    <div class="card mb-4">
+     <div class="card-body p-0">
+        <h3 class="card-title m-2">Property Listings</h3>
+        <table class="table table-striped text-center align-middle">
+          <thead class="table-primary">
+            <tr>
+              <th>#</th>
+              <th>Image</th>
+              <th>Title</th>
+              <th>Location</th>
+              <th>Type</th>
+              <th>Price (₦)</th>
+              <th>Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in page_obj %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td style="width: 100px;">
+                  {% if item.images.first %}
+                    <img src="{{ item.images.first.image.url }}" class="img-fluid rounded" alt="{{ item.title }}" style="height: 60px; object-fit: cover;">
+                  {% else %}
+                    <img src="{% static 'img/default-property.jpg' %}" class="img-fluid rounded" alt="Default" style="height: 60px;">
+                  {% endif %}
+                </td>
+                <td>{{ item.title }}</td>
+                <td>{{ item.location }}</td>
+                <td>{{ item.property_type }}</td>
+                <td>₦{{ item.price|floatformat:2 }}</td>
+                <td>{{ item.date_added|date:"M d, Y" }}</td>
+                <td>
+                  <a href="{% url 'viewProperty' item.id %}" class="btn btn-sm btn-outline-warning text-dark">View</a>
+                  <a href="{% url 'add_subscription_plan' item.id %}" class="btn btn-sm btn-outline-dark">Add Plan</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" class="text-muted">No properties available.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            
+            <div class="card-tools">
+              {% if page_obj.has_other_pages %}
+                <ul class="pagination pagination-sm m-0">
+                  {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link bg-dark text-white px-3 text-[12px] border-none" href="?page=1">&laquo;</a></li>
+                    <li class="page-item"><a class="page-link bg-dark text-white px-3 text-[12px] border-none" href="?page={{ page_obj.previous_page_number }}">‹</a></li>
+                  {% endif %}
+                  <li class="page-item active btn-outline-dark border-none"><span class="page-link bg-dark text-white px-3 text-[12px]">{{ page_obj.number }}</span></li>
+                  {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link bg-dark text-white px-3 text-[12px]" href="?page={{ page_obj.next_page_number }}">›</a></li>
+                    <li class="page-item"><a class="page-link bg-dark text-white px-3 text-[12px]" href="?page={{ page_obj.paginator.num_pages }}">&raquo;</a></li>
+                  {% endif %}
+                </ul>
+              {% endif %}
+            </div>
+          </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% include 'Dashboard/footer.html' %}

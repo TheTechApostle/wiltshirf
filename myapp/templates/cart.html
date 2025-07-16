@@ -1,0 +1,74 @@
+{% load static %}
+{% include 'header.html' %}
+
+<div class="container my-5">
+  <h3 class="mb-4">Your Cart</h3>
+
+  {% if cart %}
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      {% for id, item in cart.items %}
+        <div class="col">
+          <div class="card shadow-sm h-100">
+            {% if item.image %}
+              <img src="{{ item.image }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+              <h5 class="card-title">{{ item.title }}</h5>
+              <p><strong>Full Price:</strong> ₦{{ item.price }}</p>
+              
+              {% if item.initial_deposit_amount %}
+                <p><strong>Deposit %:</strong> {{ item.initial_deposit_percent }}%</p>
+                <p><strong>Deposit Amount:</strong> ₦{{ item.initial_deposit_amount }}</p>
+              {% else %}
+                <p><strong>Deposit %:</strong> 100%</p>
+                <p><strong>Deposit Amount:</strong> ₦{{ item.price }}</p>
+              {% endif %}
+              <a href="{% url 'remove_from_cart' id %}" class="btn btn-danger">Remove from Cart</a>
+
+            </div>
+          </div>
+          
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-4">
+      <h5>Total Price: <span class="text-primary">₦{{ total_price|floatformat:2 }}</span></h5>
+
+      {% if total_deposit %}
+        <h5>Total Deposit: <span class="text-success">₦{{ total_deposit|floatformat:2 }}</span></h5>
+      {% endif %}
+
+      <button id="payWithPaystack" class="btn btn-primary mt-3">Proceed to Checkout</button>
+    </div>
+  {% else %}
+    <div class="alert alert-info">Your cart is empty.</div>
+  {% endif %}
+</div>
+<!-- Paystack Script -->
+<script src="https://js.paystack.co/v1/inline.js"></script>
+
+<script>
+  document.getElementById('payWithPaystack').addEventListener('click', function (e) {
+    e.preventDefault();
+
+    var handler = PaystackPop.setup({
+      key: '{{ PAYSTACK_PUBLIC_KEY }}',  // Set this in context or use your actual test key here
+      email: '{{ request.user.email }}',
+      amount: {{ total_deposit|default:total_price|floatformat:2 }} * 100,  // in kobo
+      currency: "NGN",
+      ref: 'TX'+Math.floor((Math.random() * 1000000000) + 1), // Unique transaction ref
+      callback: function (response) {
+        // handle success
+        window.location.href = "{% url 'verify_payment' %}?reference=" + response.reference;
+      },
+      onClose: function () {
+        alert('Transaction was not completed.');
+      }
+    });
+
+    handler.openIframe();
+  });
+</script>
+
+{% include 'footer.html' %}

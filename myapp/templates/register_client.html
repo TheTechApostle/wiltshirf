@@ -1,0 +1,47 @@
+{% load static %}
+{% include 'header.html' %}
+
+<div class="container-fluid mt-5">
+  <div class="row g-0">
+
+    <!-- Left: Registration Form -->
+    <div class="col-12 col-md-6 d-flex align-items-center justify-content-center">
+      <div class="bg-white rounded-4 shadow-lg p-4 p-md-5 w-100 animate__animated animate__fadeIn" style="max-width: 500px;">
+        <h3 class="text-center mb-4">
+          Client <span class="text-primary">Registration</span>
+        </h3>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for field in form %}
+            <div class="mb-3">
+              <label class="form-label">{{ field.label }}</label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="text-danger small">{{ field.errors.0 }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+
+          <button type="submit" class="btn btn-primary w-100 py-2">Register</button>
+        </form>
+
+        <p class="text-center mt-3">
+          Already have an account?
+          <a href="{% url 'LoginUser' %}" class="text-primary">Login here</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Right: Background Image -->
+    <div class="col-lg-6 d-none d-lg-block"
+         style="background-image: url('{% static 'img/carousel-2.jpg' %}');
+                background-size: cover;
+                background-position: center;
+                min-height: 100vh;">
+    </div>
+
+  </div>
+</div>
+
+{% include 'footer.html' %}

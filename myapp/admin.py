@@ -18,3 +18,15 @@ admin.site.register(PropertyType)
 admin.site.register(Location)
 admin.site.register(Agent)
 admin.site.register(ClientTestimony)
+admin.site.register(Cart)
+admin.site.register(SubscriptionPlan)
+admin.site.register(PropertySubscription)
+admin.site.register(Transaction)
+admin.site.register(PurchasedProduct)
+
+
+@admin.register(SubscriptionPropertyPlan)
+class SubscriptionPropertyPlanAdmin(admin.ModelAdmin):
+    list_display = ('property', 'duration_months', 'initial_deposit_percent', 'initial_payment', 'monthly_payment')
+    list_filter = ('duration_months',)
+    search_fields = ('property__title',)

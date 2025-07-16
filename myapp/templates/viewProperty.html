@@ -1,0 +1,251 @@
+{% load static %}
+{% load customs_tags %}
+{% include 'header.html' %}
+
+<!-- FontAwesome & jQuery -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+<div class='bg-white'>
+  <div class="container my-5">
+    <div class="row gy-4">
+      <!-- Property Images Carousel -->
+      <div class="col-md-6">
+        {% if images %}
+        <div id="propertyCarousel" class="carousel slide shadow rounded" data-bs-ride="carousel">
+          <div class="carousel-inner">
+            {% for image in images %}
+            <div class="carousel-item {% if forloop.first %}active{% endif %}">
+              <img src="{{ image.image.url }}" class="d-block w-100" alt="{{ image.label }}">
+              <div class="carousel-caption">
+                <h5 class="h5-text">Explore the {{ image.label }} View</h5>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button class="carousel-control-prev" type="button" data-bs-target="#propertyCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+          </button>
+          <button class="carousel-control-next" type="button" data-bs-target="#propertyCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+          </button>
+        </div>
+        {% else %}
+        <p class="text-muted">No images available for this property.</p>
+        {% endif %}
+      </div>
+
+      {% if lat and lng %}
+      <div class="col-md-6">
+        <h5 class="fw-semibold mt-1">Map Location</h5>
+        <div id="map" class="shadow rounded" style="height: 350px;"></div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Property & Cart Section -->
+  <section class='container bg-white mt-2'>
+    <div class="row pl-4">
+      <div class="col-md-6">
+        <h2 class="text-dark fw-bold">{{ property.title }}</h2>
+        <span class="badge bg-success mb-2">{{ property.propertyFeature }}</span>
+        <p><strong>Location:</strong> {{ property.location }}</p>
+        <p><strong>Type:</strong> {{ property.property_type }}</p>
+        <p>{{ property.description }}</p>
+        <h4 class="fw-bold">
+          <span class='text-black'>Full: </span>
+          <span class="text-primary">₦{{ property.price }}</span>
+        </h4>
+        {% if user.is_authenticated %}
+      </div>
+
+      <div class="col-md-6">
+        {% for plans in subscriptionPlan %}
+        <div class="subscription-card bg-white rounded-4 shadow-sm p-4 mt-0 border-start border-4 border-primary position-relative">
+          <div class="d-flex justify-content-between align-items-center mb-0">
+            <h5 class="mb-0 fw-bold text-primary">Subscription Plan</h5>
+            <span class="badge bg-light text-primary border border-primary">₦{{ plans.monthly_payment }}/mo</span>
+          </div>
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2">
+              <i class="fas fa-percentage text-danger me-2"></i>
+              <strong>Initial Deposit:</strong> {{ plans.initial_deposit_percent }}%
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-wallet text-danger me-2"></i>
+              <strong>Initial Payment:</strong> ₦{{ plans.initial_payment }}
+            </li>
+            <li class="mb-2">
+              <i class="fas fa-clock text-danger me-2"></i>
+              <strong>Duration:</strong> {{ plans.duration_months }} months
+            </li>
+            <li>
+              <i class="fas fa-credit-card text-danger me-2"></i>
+              <strong>Monthly Payment:</strong> ₦{{ plans.monthly_payment }}
+            </li>
+          </ul>
+        </div>
+        {% endfor %}
+
+        <!-- jQuery Cart Section -->
+        <div id="cartSection" class="mt-3">
+          <label for="depositPercent" class="form-label fw-semibold">Select Initial Deposit %</label>
+          <select id="depositPercent" class="form-select mb-2">
+           
+          </select>
+
+          <div id="depositAmountText" class="text-muted mb-3">
+            Initial Deposit: ₦<span id="calculatedDeposit">0</span>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button id="addToCartBtn" class="btn btn-warning shadow-sm px-4">
+              <i class="fas fa-shopping-cart me-1"></i> Add to Cart
+            </button>
+            <button class="btn btn-outline-danger px-3">
+              <i class="fas fa-heart"></i>
+            </button>
+          </div>
+
+          <div id="responseMsg" class="mt-3 alert d-none"></div>
+        </div>
+
+        {% else %}
+        <div class="col-md-6 mt-4">
+          <a href="{% url 'LoginUser' %}?next={% url 'viewProperty' property.id %}" class="btn btn-outline-primary shadow-sm px-4">
+            <i class="fas fa-sign-in-alt me-1"></i> Login to Add to Cart
+          </a>
+        </div>
+        {% endif %}
+        <a href="{% url 'add_subscription_plan' property.id %}" class="btn btn-outline-primary mt-3">Add Plan</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+{% include 'footer.html' %}
+
+<!-- Google Maps Script -->
+{% if lat and lng %}
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}"></script>
+<script>
+  function initMap() {
+    const location = { lat: {{ lat }}, lng: {{ lng }} };
+    const map = new google.maps.Map(document.getElementById("map"), {
+      zoom: 15,
+      center: location
+    });
+    new google.maps.Marker({
+      position: location,
+      map: map,
+      title: "{{ property.title }}"
+    });
+  }
+
+  // Detect Internet Connection
+  function checkConnectionAndLoadMap() {
+    if (navigator.onLine) {
+      initMap();
+    } else {
+      document.getElementById("map").innerHTML = `
+        <div class="alert alert-danger text-center mt-3">
+          ⚠️ Please connect to the internet to view the map.
+        </div>
+      `;
+    }
+  }
+
+  window.onload = checkConnectionAndLoadMap;
+</script>
+{% else %}
+<div class="alert alert-warning">Location data not available.</div>
+{% endif %}
+
+<!-- jQuery Script -->
+<script>
+  $(document).ready(function () {
+    const price = {{ property.price|floatformat:2 }};
+    const maxPercent = {{ subscriptionPlan.first.initial_deposit_percent|default:100 }};
+
+    const $select = $('#depositPercent');
+
+    // Populate dropdown from 10% up to maxPercent
+    for (let i = maxPercent; i <= 100; i += 10) {
+      $select.append(`<option value="${i}">${i}%</option>`);
+    }
+
+    // Calculate deposit amount
+    function calculateDeposit(percent) {
+      return (price * percent / 100).toFixed(2);
+    }
+
+    // Set initial calculated deposit
+    $('#calculatedDeposit').text(calculateDeposit($select.val()));
+
+    // Update on change
+    $select.change(function () {
+      $('#calculatedDeposit').text(calculateDeposit(this.value));
+    });
+
+    // Add to cart via AJAX
+    $('#addToCartBtn').click(function () {
+      const percent = parseInt($select.val());
+      const deposit = calculateDeposit(percent);
+
+      $.ajax({
+        url: "{% url 'add_to_cart' property.id %}",
+        type: "POST",
+        headers: {
+          "X-CSRFToken": "{{ csrf_token }}"
+        },
+        contentType: "application/json",
+        data: JSON.stringify({
+          percentage: percent,
+          deposit: deposit
+        }),
+        success: function (res) {
+          $('#responseMsg').removeClass().addClass('alert alert-success').text(res.message).removeClass('d-none');
+        },
+        error: function () {
+          $('#responseMsg').removeClass().addClass('alert alert-danger').text("An error occurred.").removeClass('d-none');
+        }
+      });
+    });
+  });
+</script>
+
+
+<!-- Optional Styling -->
+<style>
+  .h5-text {
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    display: inline-block;
+  }
+
+  .carousel-inner img {
+    border-radius: 10px;
+    object-fit: cover;
+    height: 400px;
+  }
+
+  .btn-warning {
+    background-color: #f68b1e;
+    border: none;
+  }
+
+  .btn-outline-danger:hover {
+    background-color: #dc3545;
+    color: #fff;
+  }
+
+  @media (max-width: 768px) {
+    .carousel-inner img {
+      height: 250px;
+    }
+  }
+</style>

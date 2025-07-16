@@ -1,7 +1,5 @@
 {% load static %}
-
-
-  {% include 'Dashboard/header.html'%}
+{% include 'Dashboard/header.html'%}
       <!--end::Sidebar-->
       <!--begin::App Main-->
       <main class="app-main">
@@ -35,8 +33,8 @@
                 <!--begin::Small Box Widget 1-->
                 <div class="small-box text-bg-primary">
                   <div class="inner">
-                    <h3>150</h3>
-                    <p>New Orders</p>
+                    <h3>{{ propertyCount }}</h3>
+                    <p>Total Property </p>
                   </div>
                   <svg
                     class="small-box-icon"
@@ -50,7 +48,7 @@
                     ></path>
                   </svg>
                   <a
-                    href="#"
+                    href="{% url 'my_orders' %}"
                     class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover"
                   >
                     More info <i class="bi bi-link-45deg"></i>
@@ -63,8 +61,8 @@
                 <!--begin::Small Box Widget 2-->
                 <div class="small-box text-bg-success">
                   <div class="inner">
-                    <h3>53<sup class="fs-5">%</sup></h3>
-                    <p>Bounce Rate</p>
+                    <h3>₦{{ total_investment|floatformat:2 }}<sup class="fs-5">k</sup></h3>
+                    <p>Total Investment</p>
                   </div>
                   <svg
                     class="small-box-icon"
@@ -91,9 +89,18 @@
                 <!--begin::Small Box Widget 3-->
                 <div class="small-box text-bg-warning">
                   <div class="inner">
-                    <h3>44</h3>
-                    <p>User Registrations</p>
+                    {% if is_client %}
+                      <h3>₦{{ to_balance|default:0|floatformat:2 }}<sup class="fs-5">k</sup></h3>
+                      <p>Outstanding Balance</p>
+                    {% elif is_admin %}
+                      <h3>₦{{ to_balance|default:0|floatformat:2 }}<sup class="fs-5">k</sup></h3>
+                      <p>Total Outstanding Balance</p>
+                    {% else %}
+                      <h3>₦0.00<sup class="fs-5">k</sup></h3>
+                      <p>Total Outstanding Balance</p>
+                    {% endif %}
                   </div>
+                
                   <svg
                     class="small-box-icon"
                     fill="currentColor"
@@ -101,57 +108,145 @@
                     xmlns="http://www.w3.org/2000/svg"
                     aria-hidden="true"
                   >
-                    <path
-                      d="M6.25 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM3.25 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM19.75 7.5a.75.75 0 00-1.5 0v2.25H16a.75.75 0 000 1.5h2.25v2.25a.75.75 0 001.5 0v-2.25H22a.75.75 0 000-1.5h-2.25V7.5z"
-                    ></path>
+                    <path d="M12 1a1 1 0 011 1v14.586l3.293-3.293a1 1 0 011.414 1.414l-5 5a1 1 0 01-1.414 0l-5-5a1 1 0 111.414-1.414L11 16.586V2a1 1 0 011-1z" />
                   </svg>
-                  <a
-                    href="#"
-                    class="small-box-footer link-dark link-underline-opacity-0 link-underline-opacity-50-hover"
-                  >
+                
+                  <a href="#" class="small-box-footer link-dark link-underline-opacity-0 link-underline-opacity-50-hover">
                     More info <i class="bi bi-link-45deg"></i>
                   </a>
                 </div>
+                
                 <!--end::Small Box Widget 3-->
               </div>
               <!--end::Col-->
-              <div class="col-lg-3 col-6">
-                <!--begin::Small Box Widget 4-->
-                <div class="small-box text-bg-danger">
-                  <div class="inner">
-                    <h3>65</h3>
-                    <p>Unique Visitors</p>
+              {% if is_client %}
+                <div class="col-lg-3 col-6">
+                  <div class="small-box text-bg-info">
+                    <div class="inner">
+                      <h3>{{ payment_progress }}<sup class="fs-5">%</sup></h3>
+                      <p>Payment Progress</p>
+                    </div>
+                    <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M5 3v18l15-9L5 3z" />
+                    </svg>
+                    <a href="#" class="small-box-footer">More info <i class="bi bi-link-45deg"></i></a>
                   </div>
-                  <svg
-                    class="small-box-icon"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                    aria-hidden="true"
-                  >
-                    <path
-                      clip-rule="evenodd"
-                      fill-rule="evenodd"
-                      d="M2.25 13.5a8.25 8.25 0 018.25-8.25.75.75 0 01.75.75v6.75H18a.75.75 0 01.75.75 8.25 8.25 0 01-16.5 0z"
-                    ></path>
-                    <path
-                      clip-rule="evenodd"
-                      fill-rule="evenodd"
-                      d="M12.75 3a.75.75 0 01.75-.75 8.25 8.25 0 018.25 8.25.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V3z"
-                    ></path>
-                  </svg>
-                  <a
-                    href="#"
-                    class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover"
-                  >
-                    More info <i class="bi bi-link-45deg"></i>
-                  </a>
                 </div>
-                <!--end::Small Box Widget 4-->
-              </div>
+                {% endif %}
+                {% if is_admin %}
+                  <div class="col-lg-3 col-6">
+                    <div class="small-box text-bg-secondary">
+                      <div class="inner">
+                        <h3>{{ total_visitors }}</h3>
+                        <p>Total Active Visitors</p>
+                      </div>
+                      <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 1.8c-3.3 0-9.9 1.7-9.9 5v2h19.8v-2c0-3.3-6.6-5-9.9-5z"/>
+                      </svg>
+                      <a href="#" class="small-box-footer">More info <i class="bi bi-link-45deg"></i></a>
+                    </div>
+                  </div>
+                {% endif %}
+
               <!--end::Col-->
             </div>
             <!--end::Row-->
+            <!-- begin row -->
+           
+             
+                <div class="row">
+                  <div class="col-lg-4 col-sm-11 col-md-6 bg-slate-200 pt-2 mb-2">
+                    {% if property %}
+                      <div class="list-group" id="property-list">
+                        {% for item in property %}
+                          <div class="list-group-item list-group-item-action mb-3 rounded shadow-sm property-card"
+                               data-location="{{ item.location|escapejs }}">
+                            <div class="d-flex align-items-center">
+                              {% with image=item.images.all.0 %}
+                                {% if image %}
+                                  <img src="{{ image.image.url }}" alt="{{ item.title }}" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                                {% else %}
+                                  <img src="{% static 'img/default-property.jpg' %}" alt="Default Image" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                                {% endif %}
+                              {% endwith %}
+                  
+                              <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                  <h5 class="mb-1 text-primary fw-bold">{{ item.title }}</h5>
+                                  <span class="badge bg-success">Purchased</span>
+                                </div>
+                                <p class="mb-1 text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> {{ item.location }}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                  <span class="badge bg-light text-dark border">₦{{ item.price|floatformat:2 }}</span>
+                                  <span class="badge bg-info text-white">{{ item.property_type }}</span>
+                                  <span class="text-muted small"><i class="bi bi-clock-history me-1"></i> {{ item.date_added|timesince }} ago</span>
+                                </div>
+                              </div>
+                  
+                              <div class="ms-3">
+                                <a href="{% url 'viewProperty' item.id %}" class="btn btn-sm btn-outline-primary">View</a>
+                              </div>
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <div class="alert alert-warning text-center">You have no purchased properties yet.</div>
+                    {% endif %}
+                  
+                    <div class="d-flex justify-content-center my-2">
+                      <a class='btn btn-small btn-outline-primary' href=''>View all Properties</a>
+                    </div>
+                  </div>
+                  
+                  <div class="col-lg-4 col-sm-12 mb-4">
+                    <div class="card shadow-sm rounded-4">
+                      <div class="card-header bg-light">
+                        <h5 class="mb-0">Map Location</h5>
+                      </div>
+                      <div class="card-body">
+                        <div class="mb-2">
+                          <strong>Selected Address:</strong>
+                          <p id="selected-address" class="text-primary fw-bold">Nigeria</p>
+                        </div>
+                        <div id="map" style="height: 300px; width: 100%; border-radius: 0.5rem;"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  
+              <div class="col-lg-4">
+                <div class="card shadow-sm rounded-4 mb-4">
+                  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Payments</h5>
+                    <i class="bi bi-credit-card text-secondary"></i>
+                  </div>
+                  <div class="card-body p-0">
+                    {% if recent_payments %}
+                      <ul class="list-group list-group-flush">
+                        {% for payment in recent_payments %}
+                          <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                              <strong>₦{{ payment.amount|floatformat:2 }}</strong><br>
+                              <small class="text-muted">{{ payment.created_at|date:"M d, Y - H:i a" }}</small>
+                            </div>
+                            <span class="badge bg-success">Paid</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      <div class="p-3 text-muted text-center">No recent payments found.</div>
+                    {% endif %}
+                  </div>
+                  <div class="card-footer text-center bg-white">
+                    <a href="" class="btn btn-outline-primary btn-sm">Fund Wallet</a>
+                    <a href="{% url 'payment_history'%}" class="btn btn-outline-primary btn-sm">View Full Payment History</a>
+                  </div>
+                </div>
+                
+              </div>
+             </div>
+             <!--end::Row-->
             <!--begin::Row-->
             <div class="row">
               <!-- Start col -->
@@ -692,6 +787,59 @@
       const sparkline3 = new ApexCharts(document.querySelector('#sparkline-3'), option_sparkline3);
       sparkline3.render();
     </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDQUDUVxVx_y7t5JvAHfVC_hYpgsHlU8Io&callback=initMap" async defer></script>
+
+<script>
+  let map;
+  let marker;
+  let geocoder;
+
+  function initMap() {
+    const defaultLocation = { lat: 9.0820, lng: 8.6753 }; // Nigeria default
+    map = new google.maps.Map(document.getElementById("map"), {
+      center: defaultLocation,
+      zoom: 6,
+    });
+
+    marker = new google.maps.Marker({
+      map: map,
+      position: defaultLocation,
+    });
+
+    geocoder = new google.maps.Geocoder();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const propertyCards = document.querySelectorAll('.property-card');
+    const addressDisplay = document.getElementById('selected-address');
+
+    propertyCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const location = card.getAttribute('data-location');
+        addressDisplay.textContent = location;
+
+        geocoder.geocode({ address: location }, (results, status) => {
+          if (status === 'OK') {
+            const position = results[0].geometry.location;
+            map.setCenter(position);
+            map.setZoom(15);
+
+            marker.setPosition(position);
+
+            // Optional: show info window
+            const infowindow = new google.maps.InfoWindow({
+              content: `<strong>${location}</strong><br>${results[0].formatted_address}`
+            });
+            infowindow.open(map, marker);
+          } else {
+            alert("Geocode was not successful: " + status);
+          }
+        });
+      });
+    });
+  });
+</script>
+
     <!--end::Script-->
   </body>
   <!--end::Body-->

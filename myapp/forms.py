@@ -1,17 +1,22 @@
 from django  import forms
 from .models import *
-
+from django.contrib.auth.forms import AuthenticationForm
 
 class PropertyForm(forms.ModelForm):
     class Meta:
         model = Property
-        fields = ['title', 'description', 'price','property_type', 'location', 'propertyFeature']
+        fields = ['title', 'description', 'price','property_type', 'location', 'propertyFeature', 'property_status', 'allSubscription']
         widgets = {
             'title':forms.TextInput(attrs={'class':'form-control', 'placeholder':'Enter Proper Title'}),
             'description':forms.Textarea(attrs={'class':'form-control','placeholder':'Enter Property Description'}),
             'price':forms.NumberInput(attrs={'class':'form-control', 'placeholder':'Enter Price of Property'}),
             'property_type':forms.Select(attrs={'class':'form-control'}),
             'propertyFeature':forms.Select(attrs={'class':'form-control'}),
+            'property_status':forms.Select(attrs={'class':'form-control'}),
+            'allSubscription':forms.Select(attrs={
+                'class': 'form-control d-none',  # Hidden by default, replaced by toggle
+                'id': 'subscriptionToggle'
+            }),
             'location':forms.Select(attrs={'class':'form-control'}),
         }
 
@@ -65,3 +70,40 @@ class ClientTestimonyForm(forms.ModelForm):
             'statement': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Statement'}),
             'profile_picture': forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
+
+
+class LoginForm(AuthenticationForm):
+    username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+
+
+
+class SubscriptionPropertyPlanForm(forms.ModelForm):
+    class Meta:
+        model = SubscriptionPropertyPlan
+        fields = ['duration_months', 'initial_deposit_percent']
+        widgets = {
+            'duration_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'initial_deposit_percent': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 99}),
+        }
+
+
+class ClientRegistrationForm(forms.ModelForm):
+    username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
+    email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
+    password = forms.CharField(widget=forms.PasswordInput(attrs={'class':'form-control'}))
+    confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={'class':'form-control'}))
+    phone = forms.CharField(max_length=15, widget=forms.NumberInput(attrs={'class':'form-control'}))
+    address = forms.CharField(widget=forms.Textarea(attrs={'class':'form-control','rows':3}))
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        confirm = cleaned_data.get("confirm_password")
+        if password != confirm:
+            raise forms.ValidationError("Passwords do not match.")

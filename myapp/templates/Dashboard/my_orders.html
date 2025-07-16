@@ -1,0 +1,38 @@
+{% load static %}
+{% include 'Dashboard/header.html' %}
+
+
+<div class="container my-5">
+  <h3 class="mb-4">Recent Payments</h3>
+
+  {% if orders %}
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+      {% for item in orders %}
+        <div class="col">
+          <div class="card shadow-sm h-100 bg-[#343a40] text-white">
+            <div class="card-body">
+              <h5 class="card-title bg-[#b6a37f] p-1 rounded-sm w-full">{{ item.title }}</h5><br><br>
+              <p><strong>Full Price:</strong> ₦{{ item.price }}</p>
+              <p>
+                {% if item.to_balance > 0 %}
+                <strong>
+                    Balance:</strong> ₦{{ item.to_balance }}  
+                    <button class="px-2  bg-[#b59710] hover:bg-[#b5972a] text-white rounded shadow">
+                        Make Payment
+                    </button>
+                {% else %}
+                <small><strong>Balance </strong>Fully Paid</small>
+                {% endif %}
+            </p>
+              <p><strong>Date:</strong> {{ item.date_added|date:"F j, Y, g:i A" }}</p>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">You have no orders yet.</div>
+  {% endif %}
+</div>
+
+{% include 'Dashboard/footer.html' %}

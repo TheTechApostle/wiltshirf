@@ -12,16 +12,24 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+#load dotenv
+load_dotenv()
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-&(ivgj5)#m!+dcgi=e0m+wp_(ni1*!1g%c^a%&sp*i(*5woz^8'
 
+# paystack Public Key
+PAYSTACK_PUBLIC_KEY =  os.getenv('PAYSTACK_PUBLIC_KEY')
+PAYSTACK_SECRET_KEY =  os.getenv('PAYSTACK_SECRET_KEY')
+# DEFAULT_FROM_EMAIL = 'noreply@yourdomain.com'
+DEFAULT_FROM_EMAIL = 'info@schooldevs.com'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -79,6 +87,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.request',
+                'myapp.context_processors.user_info',
             ],
         },
     },
@@ -86,7 +95,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'wiltshirf.wsgi.application'
 
-
+GOOGLE_MAPS_API_KEY = 'AIzaSyDQUDUVxVx_y7t5JvAHfVC_hYpgsHlU8Io'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -129,6 +138,9 @@ USE_I18N = True
 USE_TZ = True
 
 
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = 'LoginUser'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
