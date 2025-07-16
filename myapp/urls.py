@@ -31,6 +31,7 @@ urlpatterns = [
     path('Dashboard/payment-history/', views.payment_history, name='payment_history'),
     path('Dashboard/wallet/', views.initiate_wallet_payment, name='initiate_wallet_payment'),
     path('Dashboard/walletsuccess/', views.verify_wallet_payment, name='verify_wallet_payment'),
+    path('Dashboard/wallet_history/', views.wallet_history, name='wallet_history'),
 
 
 

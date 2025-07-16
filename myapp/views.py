@@ -12,7 +12,7 @@ from django.conf import settings
 import requests
 from django.contrib.auth import authenticate, login, logout
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponseRedirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -208,43 +208,93 @@ def Dashboard(request):
 
 @login_required
 def initiate_wallet_payment(request):
-    wallet = Wallet.objects.get(user=request.user)
-    callableUrl = request.build_absolute_uri(reverse('verify_wallet_payment'))
+    user = request.user    
+    is_client_user = is_client(user)
+    is_admin_user = is_admin(user)
+
+    wallet = 0  # Default
+
+    # Handle wallet context
+    if is_admin_user:
+        wallet = Wallet.objects.all().order_by('-updated_at')  # QuerySet for template loop
+    elif is_client_user:
+        wallet, _ = Wallet.objects.get_or_create(user=user)  # Safer than .get()
+
+    callable_url = request.build_absolute_uri(reverse('verify_wallet_payment'))
+
     if request.method == 'POST':
-        amount = int(request.POST.get('amount')) * 100  # Paystack takes in kobo
-        reference = str(uuid.uuid4())
-        email = request.user.email
+        try:
+            amount = int(request.POST.get('amount')) * 100  # Convert to kobo
+            if amount < 10000:  # ₦100 minimum
+                raise ValueError("Minimum payment is ₦100")
 
-        # Create transaction record
-        WalletTransaction.objects.create(user=request.user, amount=amount/100, reference=reference)
+            reference = str(uuid.uuid4())
+            email = user.email
 
-        headers = {
-            "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
-            "Content-Type": "application/json",
-        }
-        
-        data = {
-            "email": email,
-            "amount": amount,
-            "reference": reference,
-            "callback_url": callableUrl,
-        }
+            # Save transaction record
+            WalletTransaction.objects.create(
+                user=user,
+                amount=amount / 100,  # store in naira
+                reference=reference
+            )
 
-        response = requests.post('https://api.paystack.co/transaction/initialize', json=data, headers=headers)
-        res_data = response.json()
+            headers = {
+                "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+                "Content-Type": "application/json",
+            }
 
-        if res_data['status']:
-            return redirect(res_data['data']['authorization_url'])
-        else:
-            return render(request, 'error.html', {'message': 'Paystack Initialization Failed'})
-    context = {'wallet':wallet}
+            data = {
+                "email": email,
+                "amount": amount,
+                "reference": reference,
+                "callback_url": callable_url,
+            }
 
+            response = requests.post('https://api.paystack.co/transaction/initialize', json=data, headers=headers)
+            res_data = response.json()
+
+            if res_data.get('status'):
+                return redirect(res_data['data']['authorization_url'])
+            else:
+                return render(request, 'error.html', {'message': 'Paystack initialization failed.'})
+
+        except Exception as e:
+            return render(request, 'error.html', {'message': str(e)})
+
+    context = {
+        'wallet': wallet,
+        'is_admin_user': is_admin_user,
+        'is_client_user': is_client_user
+    }
     return render(request, 'Dashboard/wallet.html', context)
+
+
+@login_required
+@user_passes_test(is_admin)
+def wallet_history(request):
+    query = request.GET.get('q')
+    users = User.objects.select_related('wallet').prefetch_related('wallettransaction_set')
+
+    if query:
+        users = users.filter(
+            Q(username__icontains=query) | Q(email__icontains=query)
+        )
+
+    total_balance = Wallet.objects.aggregate(total=Sum('balance'))['total'] or 0
+
+    context = {
+        'users': users,
+        'total_balance': total_balance
+    }
+    return render(request, 'Dashboard/wallet_history.html', context)
+
 
 
 @login_required(login_url="LoginUser")
 @csrf_exempt
 def verify_wallet_payment(request):
+    wallet = 0
+    user = request.user    
     reference = request.GET.get('reference')
 
     if not reference:
@@ -550,23 +600,23 @@ def register_client(request):
 
 def LoginUser(request):
     next_url = request.GET.get('next') or request.POST.get('next') or '/'
+    
     if request.method == "POST":
-        form =  LoginForm(request=request, data=request.POST)
+        form = LoginForm(request=request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            # validate by next_url
             if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-                return redirect(next_url)   
+                return redirect(next_url)
             return redirect("Dashboard")
         else:
-            messages.warning(request, 'Authentication Failed..., Username or Password Error')
-            context = {'form':form, 'next': next_url}
-            return render(request, 'login.html', context)
+            messages.warning(request, 'Authentication Failed... Username or Password Error')
     else:
         form = LoginForm()
-        context = {'form': form}
-        return render(request, 'login.html', context)
+
+    context = {'form': form, 'next': next_url}
+    return render(request, 'login.html', context)
+
     
 
 # logout view

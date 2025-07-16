@@ -1,41 +1,82 @@
 {% load static %}
 {% include 'Dashboard/header.html' %}
 
-<main class="app-main">
-  <!--begin::App Content Header-->
-  <div class="app-content-header">
-    <div class="card p-4 shadow-sm">
-        <h3 class="mb-4">Fund Wallet</h3>
+<style>
+  .wallet-card {
+    border-radius: 2rem;
+    transition: all 0.3s ease-in-out;
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    box-shadow: 8px 8px 20px #cfcfcf, -8px -8px 20px #ffffff;
+  }
+
+  .wallet-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 12px 12px 24px #cfcfcf, -12px -12px 24px #ffffff;
+  }
+
+  .wallet-balance {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #00b894;
+  }
+
+  .form-control, .btn {
+    border-radius: 0.8rem;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #1e88e5, #42a5f5);
+    border: none;
+    padding: 0.6rem 2rem;
+    font-weight: 500;
+    transition: background 0.3s ease-in-out;
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #1565c0, #1e88e5);
+  }
+
+  @media (max-width: 768px) {
+    .wallet-row {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<main class="app-main py-5 px-3">
+  <div class="container">
+    <!-- Page Title -->
+    <div class="text-center mb-5">
+      <h2 class="fw-bold">💰 Fund Your Wallet</h2>
+      <p class="text-muted">Secure payments powered by Paystack</p>
+    </div>
+
+    <!-- Content Row -->
+    <div class="d-flex gap-4 wallet-row flex-wrap justify-content-center">
+      <!-- Fund Form Card -->
+      <div class="wallet-card p-4 shadow-sm col-lg-5 col-md-6 col-12">
+        <h4 class="mb-4">Enter Amount</h4>
         <form method="POST">
           {% csrf_token %}
           <div class="mb-3">
-            <label for="amount" class="form-label">Amount (₦):</label>
-            <input type="number" class="form-control" name="amount" min="100" required>
+            <label for="amount" class="form-label fw-medium">Amount (₦)</label>
+            <input type="number" name="amount" min="100" required class="form-control" placeholder="e.g. 5000">
           </div>
-          <button type="submit" class="btn btn-primary">Proceed to Paystack</button>
+          <button type="submit" class="btn btn-primary w-100">Proceed to Paystack</button>
         </form>
       </div>
-      
-        <div class="card shadow-sm">
-        <div class="card-body">
-            <h3 class="card-title">Wallet Balance</h3>
-            <p class="fs-4">₦{{ wallet.balance }}</p>
-            <a href="{% url 'fund_wallet' %}" class="btn btn-primary">Fund Wallet</a>
+
+      <!-- Wallet Balance Card -->
+      <div class="wallet-card p-4 shadow-sm col-lg-5 col-md-6 col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="card-title">Wallet Balance</h4>
+          <i class="bi bi-wallet-fill fs-3 text-primary"></i>
         </div>
-        </div>
+        <p class="wallet-balance">₦{{ wallet.balance|default:"0.00" }}</p>
+        <a href="" class="btn btn-primary w-100 mt-3">Fund Wallet</a>
+      </div>
     </div>
+  </div>
 </main>
 
-
-<div class="card p-4 shadow-sm">
-  <h3 class="mb-4">Fund Wallet</h3>
-  <form method="POST">
-    {% csrf_token %}
-    <div class="mb-3">
-      <label for="amount" class="form-label">Amount (₦):</label>
-      <input type="number" class="form-control" name="amount" min="100" required>
-    </div>
-    <button type="submit" class="btn btn-primary">Proceed to Paystack</button>
-  </form>
-</div>
-
+{% include 'Dashboard/footer.html' %}

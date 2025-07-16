@@ -240,9 +240,11 @@
                   </div>
                   <div class="card-footer text-center bg-white">
                     {% if is_client %}
-                    <a href="" class="btn btn-outline-primary btn-sm">Fund Wallet</a>
-                    {% endif %}
+                    <a href="{% url 'initiate_wallet_payment' %}" class="btn btn-outline-primary btn-sm">Fund Wallet</a>
+                    {% elif is_admin %}
+                    <a href="{% url 'wallet_history' %}" class="btn btn-outline-primary btn-sm">View Clients Wallet</a>
                     <a href="{% url 'payment_history'%}" class="btn btn-outline-primary btn-sm">View Full Payment History</a>
+                    {% endif %}
                   </div>
                 </div>
                 

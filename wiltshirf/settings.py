@@ -139,7 +139,7 @@ USE_TZ = True
 
 
 LOGIN_URL = "/login/"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "Dashboard/"
 LOGOUT_REDIRECT_URL = 'LoginUser'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/

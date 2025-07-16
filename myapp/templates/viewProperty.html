@@ -118,7 +118,7 @@
           </a>
         </div>
         {% endif %}
-        <a href="{% url 'add_subscription_plan' property.id %}" class="btn btn-outline-primary mt-3">Add Plan</a>
+        {% comment %} <a href="{% url 'add_subscription_plan' property.id %}" class="btn btn-outline-primary mt-3">Add Plan</a> {% endcomment %}
       </div>
     </div>
   </section>
@@ -205,7 +205,11 @@
           deposit: deposit
         }),
         success: function (res) {
-          $('#responseMsg').removeClass().addClass('alert alert-success').text(res.message).removeClass('d-none');
+          $('#responseMsg')
+            .removeClass()
+            .addClass('alert alert-success')
+            .html(`${res.message} <a href="{% url 'view_cart' %}" class="btn btn-sm btn-light ms-1 mt-1">View Cart</a>`)
+            .removeClass('d-none');
         },
         error: function () {
           $('#responseMsg').removeClass().addClass('alert alert-danger').text("An error occurred.").removeClass('d-none');

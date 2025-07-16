@@ -23,6 +23,7 @@
           {% endif %}
 
           {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
           <div class="form-group mb-3">
             {{ form.username.label_tag }}
             {{ form.username }}

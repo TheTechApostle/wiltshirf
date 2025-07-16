@@ -339,13 +339,13 @@
                   </li>
                 </ul> {% endcomment %}
               </li>
-              <li class="nav-item">
+              {% comment %} <li class="nav-item">
                 <a href="../generate/theme.html" class="nav-link">
                   <i class="nav-icon bi bi-palette"></i>
                   <p>Theme Generate</p>
                 </a>
-              </li>
-              <li class="nav-item">
+              </li> {% endcomment %}
+              {% comment %} <li class="nav-item">
                 <a href="#" class="nav-link">
                   <i class="nav-icon bi bi-box-seam-fill"></i>
                   <p>
@@ -373,8 +373,8 @@
                     </a>
                   </li>
                 </ul>
-              </li>
-              <li class="nav-item">
+              </li> {% endcomment %}
+              {% comment %} <li class="nav-item">
                 <a href="#" class="nav-link">
                   <i class="nav-icon bi bi-clipboard-fill"></i>
                   <p>
@@ -445,7 +445,7 @@
                     </a>
                   </li>
                 </ul>
-              </li>
+              </li> {% endcomment %}
               <li class="nav-item">
                 <a href="#" class="nav-link">
                   <i class="nav-icon bi bi-tree-fill"></i>
@@ -537,6 +537,7 @@
                       <i class="bi bi-circle me-2"></i> View Property
                     </a>
                   </li>
+                  {% if is_admin %}
                   <li class="nav-item">
                     <a href="{% url 'FormPropertyType' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyType' %}active{% endif %}">
                       <i class="bi bi-circle me-2"></i> View Property Type
@@ -547,6 +548,7 @@
                       <i class="bi bi-circle me-2"></i> View Property Location
                     </a>
                   </li>
+                  {% endif %}
                   <li class="nav-item">
                     <a href="{% url 'add_agent' %}" class="nav-link {% if request.resolver_match.url_name == 'add_agent' %}active{% endif %}">
                       <i class="bi bi-circle me-2"></i> View Property Plan
@@ -638,7 +640,7 @@
                   <p>Layout</p>
                 </a>
               </li>
-              <li class="nav-item">
+              {% comment %} <li class="nav-item">
                 <a href="../docs/color-mode.html" class="nav-link">
                   <i class="nav-icon bi bi-star-half"></i>
                   <p>Color Mode</p>
@@ -683,7 +685,7 @@
                     </a>
                   </li>
                 </ul>
-              </li>
+              </li> {% endcomment %}
               <li class="nav-item">
                 <a href="../docs/browser-support.html" class="nav-link">
                   <i class="nav-icon bi bi-browser-edge"></i>
@@ -708,7 +710,7 @@
                   <p>License</p>
                 </a>
               </li>
-              <li class="nav-header">MULTI LEVEL EXAMPLE</li>
+              {% comment %} <li class="nav-header">MULTI LEVEL EXAMPLE</li>
               <li class="nav-item">
                 <a href="#" class="nav-link">
                   <i class="nav-icon bi bi-circle-fill"></i>
@@ -791,7 +793,7 @@
                   <i class="nav-icon bi bi-circle text-info"></i>
                   <p>Informational</p>
                 </a>
-              </li>
+              </li> {% endcomment %}
             </ul>
             <!--end::Sidebar Menu-->
           </nav>

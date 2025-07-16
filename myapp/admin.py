@@ -23,6 +23,8 @@ admin.site.register(SubscriptionPlan)
 admin.site.register(PropertySubscription)
 admin.site.register(Transaction)
 admin.site.register(PurchasedProduct)
+admin.site.register(Wallet)
+admin.site.register(WalletTransaction)
 
 
 @admin.register(SubscriptionPropertyPlan)

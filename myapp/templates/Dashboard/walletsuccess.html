@@ -1,7 +1,15 @@
+{% load static %}
+{% include 'Dashboard/header.html' %}
 
-<div class="alert alert-success text-center mt-4">
-  <h4>Success!</h4>
-  <p>₦{{ amount }} has been added to your wallet.</p>
-  <a href="{% url 'wallet' %}" class="btn btn-success">Back to Wallet</a>
-</div>
+<main class="app-main">
+  <!--begin::App Content Header-->
+  <div class="app-content-header">
+      <div class="alert alert-success text-center mt-4">
+        <h4>Success!</h4>
+        <p>₦{{ amount }} has been added to your wallet.</p>
+        <a href="{% url 'initiate_wallet_payment' %}" class="btn btn-success">Back to Wallet</a>
+      </div>
+    </div>
+  </main>
 
+  {% include 'Dashboard/footer.html' %}
