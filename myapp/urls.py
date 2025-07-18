@@ -42,8 +42,9 @@ urlpatterns = [
     path('pay_with_wallet/', views.pay_with_wallet, name='pay_with_wallet'),
     path('pay_with_paystack_or_wallet/<int:product_id>/', views.process_payment, name='process_payment'),
     path('Dashboard/chat/', views.chat_dashboard, name='chat_dashboard'),
+    path('Dashboard/error/', views.error, name='error'),
     path('Dashboard/chat/<int:user_id>/', views.chat_with_user, name='chat_with_user'),
     path('Dashboard/chat/client/', views.client_chat_view, name='client_chat'),
-
+    path('Dashboard/verify-paystack-payment/', views.verify_paystack_payment, name='verify_paystack_payment'),
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),
 ]

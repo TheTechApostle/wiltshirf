@@ -333,7 +333,10 @@ def verify_wallet_payment(request):
     res_data = response.json()
 
     if res_data['status'] and res_data['data']['status'] == 'success':
-        trans = WalletTransaction.objects.get(reference=reference)
+        try:
+            trans = WalletTransaction.objects.get(reference=reference)
+        except WalletTransaction.DoesNotExist:
+            return render(request, 'Dashboard/error.html', {'message': 'Transaction not found'})
 
         if not trans.verified:
             trans.verified = True
@@ -348,6 +351,42 @@ def verify_wallet_payment(request):
     else:
         return render(request, 'Dashboard/wallet.html', {'message': 'Verification Failed'})
 
+def error(request):
+    return render(request,'Dashboard/error.html')
+
+
+@csrf_exempt  # If called via AJAX POST without CSRF token; remove if you handle CSRF properly
+def verify_paystack_payment(request):
+    
+    reference = request.GET.get('reference') or request.POST.get('reference')
+    if not reference:
+        return JsonResponse({'status': False, 'message': 'Missing payment reference.'}, status=400)
+
+    headers = {
+        "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+    }
+    url = f"https://api.paystack.co/transaction/verify/{reference}"
+    response = requests.get(url, headers=headers)
+    res_data = response.json()
+
+    if not res_data.get('status'):
+        return JsonResponse({'status': False, 'message': 'Payment verification failed with Paystack.'})
+
+    data = res_data.get('data', {})
+    if data.get('status') != 'success':
+        return JsonResponse({'status': False, 'message': 'Payment status is not successful.'})
+
+    # Mark the WalletTransaction as verified
+    try:
+        trans = WalletTransaction.objects.get(reference=reference)
+    except WalletTransaction.DoesNotExist:
+        return JsonResponse({'status': False, 'message': 'Transaction record not found.'})
+
+    if not trans.verified:
+        trans.verified = True
+        trans.save()
+
+    return JsonResponse({'status': True, 'message': 'Payment verified successfully.', 'reference': reference})
 
 @login_required(login_url="LoginUser")
 def payment_history(request):
@@ -974,20 +1013,20 @@ def my_orders(request):
     username = user.username
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
-    orders = {}
+    orders = PurchasedProduct.objects.none()
 
-    # Get all purchased orders for the user
+    # Get orders according to user role
     if is_client_user:
         orders = PurchasedProduct.objects.filter(user=user)
     if is_admin_user:
         orders = PurchasedProduct.objects.all()
 
-    # Optional filter by user (only for admin)
+    # Filter by selected user (admin only)
     selected_user_id = request.GET.get("user")
     if selected_user_id:
         orders = orders.filter(user_id=selected_user_id)
 
-    # Optional filter by day/month/year
+    # Filter by day/month/year
     filter_type = request.GET.get('filter')
     today = datetime.today()
     if filter_type == 'day':
@@ -997,7 +1036,7 @@ def my_orders(request):
     elif filter_type == 'year':
         orders = orders.filter(date_added__year=today.year)
 
-    # Optional search
+    # Search filter
     search_query = request.GET.get('search')
     if search_query:
         q = search_query.lower()
@@ -1013,8 +1052,9 @@ def my_orders(request):
 
     orders = orders.order_by('-date_added')
 
-    # Attach subscription plan to each order
+    # Attach subscription plan and payment reference per order
     for order in orders:
+        # Attach subscription plan
         try:
             property_obj = Property.objects.get(title=order.title)
             subscription_plan = SubscriptionPropertyPlan.objects.filter(property=property_obj).first()
@@ -1022,9 +1062,26 @@ def my_orders(request):
         except Property.DoesNotExist:
             order.subscription_plan = None
 
+        # Get or create a unique WalletTransaction for this order
+        trans = WalletTransaction.objects.filter(
+            user=order.user,
+            reference__startswith=f"ORDER-{order.id}-"
+        ).first()
+        amount = order.to_balance if order.to_balance is not None else 0
+        if not trans:
+            reference = f"ORDER-{order.id}-{uuid.uuid4().hex[:8]}"
+            amount = order.to_balance if order.to_balance is not None else 0
+            trans = WalletTransaction.objects.create(
+                user=order.user,
+                amount=amount,
+                reference=reference,
+                verified=False,
+            )
+        order.payment_reference = trans.reference
+
     percentage_options = [str(i) for i in range(30, 101, 10)]
 
-    # Get all non-admin users
+    # Non-admin users (if superuser)
     admin_group = Group.objects.get(name='admin')
     admin_users = admin_group.user_set.all()
     non_admin_users = get_user_model().objects.exclude(id__in=admin_users)
@@ -1039,6 +1096,8 @@ def my_orders(request):
         'all_users': non_admin_users if request.user.is_superuser else None,
         'selected_user_id': selected_user_id,
     })
+
+
 @login_required(login_url="LoginUser")
 def process_payment(request, product_id):
     if request.method != 'POST':

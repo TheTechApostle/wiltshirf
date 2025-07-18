@@ -143,10 +143,14 @@
                               </div>
 
                               <div class="alert alert-info d-none" id="monthlyPaymentInfo{{ item.id }}">
-                                {% if plan %}
-                                  You will pay <strong>₦{{ plan.monthly_payment|floatformat:2 }}</strong> per month for {{ plan.duration_months }} months.
+                                {% if plan.monthly_payment > item.to_balance %}
+                                You will pay <strong>₦{{ item.to_balance|floatformat:2 }}</strong> to close your Transaction
                                 {% else %}
-                                  Monthly payment info not available.
+                                  {% if plan %}
+                                    You will pay <strong>₦{{ plan.monthly_payment|floatformat:2 }}</strong> per month for {{ plan.duration_months }} months.
+                                  {% else %}
+                                    Monthly payment info not available.
+                                  {% endif %}
                                 {% endif %}
                               </div>
 
@@ -178,40 +182,95 @@
                     <!-- Modal JS -->
                     <script>
                       document.addEventListener("DOMContentLoaded", function () {
-                        const id = "{{ item.id }}";
-                        const paymentOption = document.getElementById("paymentOption" + id);
-                        const monthlyInfo = document.getElementById("monthlyPaymentInfo" + id);
-                        const percentageBox = document.getElementById("percentageSelectBox" + id);
-                        const percentageSelect = document.getElementById("percentageSelect" + id);
-                        const calculatedAmount = document.getElementById("calculatedAmount" + id);
-                        const balance = parseFloat("{{ item.to_balance|floatformat:'2' }}".replace(/,/g, ''));
-
-                        if (!paymentOption) return;
-
-                        paymentOption.addEventListener("change", function () {
-                          monthlyInfo.classList.add("d-none");
-                          percentageBox.classList.add("d-none");
-                          calculatedAmount.classList.add("d-none");
-                          calculatedAmount.textContent = "";
-
-                          if (this.value === "monthly") {
-                            monthlyInfo.classList.remove("d-none");
-                          } else if (this.value === "percentage") {
-                            percentageBox.classList.remove("d-none");
-                            if (percentageSelect) percentageSelect.dispatchEvent(new Event("change"));
-                          }
-                        });
-
-                        if (percentageSelect) {
-                          percentageSelect.addEventListener("change", function () {
-                            const percent = parseFloat(this.value);
-                            const amount = (percent / 100) * balance;
-                            calculatedAmount.textContent = `You will pay ₦${amount.toFixed(2)} (${percent}%)`;
-                            calculatedAmount.classList.remove("d-none");
+                        const paystackKey = "{{ PayStackKey }}";
+                        const userEmail = "{{ request.user.email }}";
+                      
+                        {% for item in orders %}
+                        (function () {
+                          const id = "{{ item.id }}";
+                          const paymentOption = document.getElementById("paymentOption" + id);
+                          const monthlyInfo = document.getElementById("monthlyPaymentInfo" + id);
+                          const percentageBox = document.getElementById("percentageSelectBox" + id);
+                          const percentageSelect = document.getElementById("percentageSelect" + id);
+                          const calculatedAmount = document.getElementById("calculatedAmount" + id);
+                          const payNowBtn = document.getElementById("payNow" + id);
+                      
+                          const toBalance = parseFloat("{{ item.to_balance|floatformat:'2' }}".replace(/,/g, '')) || 0;
+                          const monthlyPayment = parseFloat("{{ item.subscription_plan.monthly_payment|default:'0'|floatformat:'2' }}") || 0;
+                      
+                          if (!paymentOption) return;
+                      
+                          paymentOption.addEventListener("change", function () {
+                            monthlyInfo.classList.add("d-none");
+                            percentageBox.classList.add("d-none");
+                            calculatedAmount.classList.add("d-none");
+                            calculatedAmount.textContent = "";
+                      
+                            if (this.value === "monthly") {
+                              monthlyInfo.classList.remove("d-none");
+                            } else if (this.value === "percentage") {
+                              percentageBox.classList.remove("d-none");
+                              if (percentageSelect) percentageSelect.dispatchEvent(new Event("change"));
+                            }
                           });
-                        }
+                      
+                          if (percentageSelect) {
+                            percentageSelect.addEventListener("change", function () {
+                              const percent = parseFloat(this.value);
+                              const amount = (percent / 100) * toBalance;
+                              calculatedAmount.textContent = `You will pay ₦${amount.toFixed(2)} (${percent}%)`;
+                              calculatedAmount.classList.remove("d-none");
+                            });
+                          }
+                      
+                          if (payNowBtn) {
+                            payNowBtn.addEventListener("click", function () {
+                              let amountToPay = 0;
+                      
+                              if (paymentOption.value === "monthly") {
+                                amountToPay = toBalance < monthlyPayment ? toBalance : monthlyPayment;
+                              } else if (paymentOption.value === "percentage" && percentageSelect) {
+                                const percent = parseFloat(percentageSelect.value);
+                                amountToPay = (percent / 100) * toBalance;
+                              }
+                      
+                              if (amountToPay <= 0 || isNaN(amountToPay)) {
+                                alert("Invalid payment amount.");
+                                return;
+                              }
+                      
+                              PaystackPop.setup({
+                                key: paystackKey,
+                                email: userEmail,
+                                amount: Math.round(amountToPay * 100),
+                                currency: 'NGN',
+                                ref: '{{ item.payment_reference }}',
+                                callback: function (response) {
+                                  fetch(`/verify-paystack-payment/?reference=${response.reference}`)
+                                    .then(res => res.json())
+                                    .then(data => {
+                                      if(data.status) {
+                                        alert('Payment verified successfully!');
+                                        location.reload();
+                                      } else {
+                                        alert('Payment verification failed: ' + data.message);
+                                      }
+                                    })
+                                    .catch(() => alert('Verification request failed.'));
+                                },
+                                onClose: function () {
+                                  alert('Transaction was not completed.');
+                                }
+                              }).openIframe();
+                            });
+                          }
+                        })();
+                        {% endfor %}
                       });
-                    </script>
+                      </script>
+                      
+                    
+                      
                     {% endwith %}
                   {% else %}
                     <span class="badge bg-success">Completed</span>
