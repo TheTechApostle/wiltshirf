@@ -107,3 +107,13 @@ class ClientRegistrationForm(forms.ModelForm):
         confirm = cleaned_data.get("confirm_password")
         if password != confirm:
             raise forms.ValidationError("Passwords do not match.")
+        
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['content']
+        widgets = {
+            'content': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Type your message...'}),
+        }

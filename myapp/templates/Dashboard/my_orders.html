@@ -1,38 +1,345 @@
 {% load static %}
 {% include 'Dashboard/header.html' %}
 
+<main class="app-main">
+  <div class="container my-5">
 
-<div class="container my-5">
-  <h3 class="mb-4">Recent Payments</h3>
-
-  {% if orders %}
-    <div class="row row-cols-1 row-cols-md-2 g-4">
-      {% for item in orders %}
-        <div class="col">
-          <div class="card shadow-sm h-100 bg-[#343a40] text-white">
-            <div class="card-body">
-              <h5 class="card-title bg-[#b6a37f] p-1 rounded-sm w-full">{{ item.title }}</h5><br><br>
-              <p><strong>Full Price:</strong> ₦{{ item.price }}</p>
-              <p>
-                {% if item.to_balance > 0 %}
-                <strong>
-                    Balance:</strong> ₦{{ item.to_balance }}  
-                    <button class="px-2  bg-[#b59710] hover:bg-[#b5972a] text-white rounded shadow">
-                        Make Payment
-                    </button>
-                {% else %}
-                <small><strong>Balance </strong>Fully Paid</small>
-                {% endif %}
-            </p>
-              <p><strong>Date:</strong> {{ item.date_added|date:"F j, Y, g:i A" }}</p>
-            </div>
-          </div>
-        </div>
-      {% endfor %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold">
+        {% if is_admin %} All Clients Order {% else %} My Order {% endif %}
+      </h3>
+    
+      <!-- Filter Form -->
+      <form class="d-flex gap-2" method="get" novalidate>
+        <!-- Time Filter -->
+        <select name="filter" class="form-select form-select-sm">
+          <option value="">Filter By</option>
+          <option value="day" {% if request.GET.filter == "day" %}selected{% endif %}>Today</option>
+          <option value="month" {% if request.GET.filter == "month" %}selected{% endif %}>This Month</option>
+          <option value="year" {% if request.GET.filter == "year" %}selected{% endif %}>This Year</option>
+        </select>
+    
+        <!-- Admin-only user filter -->
+        {% if is_admin %}
+          <select name="user" class="form-select form-select-sm">
+            <option value="">All Clients</option>
+            {% for user in all_users %}
+              <option value="{{ user.id }}" {% if request.GET.user == user.id|stringformat:'s' %}selected{% endif %}>
+                {{ user.get_full_name|default:user.username }}
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+    
+        <!-- Search -->
+        <input type="text" name="search" value="{{ request.GET.search }}" class="form-control form-control-sm" placeholder="Search by title or status...">
+    
+        <!-- Submit -->
+        <button class="btn btn-sm btn-primary" type="submit">Apply</button>
+      </form>
     </div>
-  {% else %}
-    <div class="alert alert-info">You have no orders yet.</div>
-  {% endif %}
-</div>
+
+    {% if orders %}
+      <div class="table-responsive shadow-sm rounded">
+        <table class="table table-hover align-middle table-striped">
+          <thead class="table-dark">
+            <tr>
+              <th>Client</th>
+              <th>Title</th>
+              <th>Full Price (₦)</th>
+              <th>Deposit (₦)</th>
+              <th>Balance (₦)</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in orders %}
+              <tr>
+                <td>{{ item.user.get_full_name|default:item.user.username }}</td>
+                <td>{{ item.title }}</td>
+                <td>{{ item.price|default:0|floatformat:2 }}</td>
+                <td>{{ item.deposit|default:0|floatformat:2 }}</td>
+                <td>
+                  {% if item.to_balance > 0 %}
+                    <span class="text-danger fw-bold">₦{{ item.to_balance|floatformat:2 }}</span>
+                  {% else %}
+                    <span class="text-success fw-semibold">Fully Paid</span>
+                  {% endif %}
+                </td>
+                <td>{{ item.date_added|date:"F j, Y, g:i A" }}</td>
+                <td>
+                  {% if item.to_balance > 0 %}
+                    {% with plan=item.subscription_plan %}
+                    {% if is_client %}
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#paymentModal{{ item.id }}">
+                      Make Payment
+                    </button>
+                    {% else %}
+                    <!-- Toggle Switch -->
+                    <div class="form-check form-switch mb-3">
+                      <input 
+                        class="form-check-input auto-balance-toggle" 
+                        type="checkbox" 
+                        id="autoBalanceToggle{{ item.id }}" 
+                        data-id="{{ item.id }}" 
+                        data-title="{{ item.title }}" 
+                        {% if item.subscription_plan and item.subscription_plan.auto_balance %}checked{% endif %}
+                      >
+                      <label class="form-check-label" for="autoBalanceToggle{{ item.id }}">
+                        Auto Balance 
+                      </label>
+                    </div>
+                        <!-- Alert Modal -->
+                        
+
+                          
+                          <!-- Bootstrap Modal -->
+                          <div class="modal fade" id="autoBalanceModal" tabindex="-1" aria-labelledby="autoBalanceModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                              <div class="modal-content rounded-4 shadow">
+                                <div class="modal-header">
+                                  <h5 class="modal-title" id="autoBalanceModalLabel">Auto Balance Activated</h5>
+                                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                  This will automatically deduct the client's monthly balance based on the set percentage. Do you want to continue?
+                                </div>
+                                <div class="modal-footer">
+                                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                  <button type="button" class="btn btn-primary" id="confirmAutoBalance">Yes, Proceed</button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                  
+                    
+                    {% endif %}
+                    <!-- Payment Modal -->
+                    <div class="modal fade" id="paymentModal{{ item.id }}" tabindex="-1" aria-labelledby="paymentModalLabel{{ item.id }}" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content rounded-4 shadow-lg">
+                          <div class="modal-header bg-light border-bottom">
+                            <h5 class="modal-title" id="paymentModalLabel{{ item.id }}">
+                              Make Payment for "{{ item.title }}"
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                          </div>
+                          <div class="modal-body">
+                            <form method="POST" action="{% url 'process_payment' item.id %}">
+                              {% csrf_token %}
+                              <p><strong>Balance:</strong> ₦{{ item.to_balance|floatformat:2 }}</p>
+                              {% if plan %}
+                                <p><strong>Plan:</strong> {{ plan.duration_months }} months — Initial Deposit: {{ plan.initial_deposit_percent }}%</p>
+                              {% endif %}
+
+                              <div class="mb-3">
+                                <label for="paymentOption{{ item.id }}" class="form-label">Payment Option</label>
+                                <select class="form-select payment-option" name="payment_option" id="paymentOption{{ item.id }}" required>
+                                  <option value="">-- Select --</option>
+                                  <option value="monthly">Pay Monthly</option>
+                                  <option value="percentage">Pay by Percentage</option>
+                                </select>
+                              </div>
+
+                              <div class="alert alert-info d-none" id="monthlyPaymentInfo{{ item.id }}">
+                                {% if plan %}
+                                  You will pay <strong>₦{{ plan.monthly_payment|floatformat:2 }}</strong> per month for {{ plan.duration_months }} months.
+                                {% else %}
+                                  Monthly payment info not available.
+                                {% endif %}
+                              </div>
+
+                              <div class="mb-3 d-none" id="percentageSelectBox{{ item.id }}">
+                                <label for="percentageSelect{{ item.id }}" class="form-label">Select Percentage</label>
+                                <select name="percentage" class="form-select" id="percentageSelect{{ item.id }}">
+                                  {% for percent in percentage_options %}
+                                    <option value="{{ percent }}">{{ percent }}%</option>
+                                  {% endfor %}
+                                </select>
+                              </div>
+
+                              <div class="alert alert-info d-none" id="calculatedAmount{{ item.id }}"></div>
+
+                              <div class="mt-4 d-grid gap-2">
+                                <button type="submit" name="method" value="wallet" class="btn btn-success">
+                                  <i class="bi bi-wallet2 me-1"></i> Pay with Wallet
+                                </button>
+                                <button type="submit" name="method" value="paystack" class="btn btn-primary">
+                                  <i class="bi bi-credit-card me-1"></i> Pay with Paystack
+                                </button>
+                              </div>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Modal JS -->
+                    <script>
+                      document.addEventListener("DOMContentLoaded", function () {
+                        const id = "{{ item.id }}";
+                        const paymentOption = document.getElementById("paymentOption" + id);
+                        const monthlyInfo = document.getElementById("monthlyPaymentInfo" + id);
+                        const percentageBox = document.getElementById("percentageSelectBox" + id);
+                        const percentageSelect = document.getElementById("percentageSelect" + id);
+                        const calculatedAmount = document.getElementById("calculatedAmount" + id);
+                        const balance = parseFloat("{{ item.to_balance|floatformat:'2' }}".replace(/,/g, ''));
+
+                        if (!paymentOption) return;
+
+                        paymentOption.addEventListener("change", function () {
+                          monthlyInfo.classList.add("d-none");
+                          percentageBox.classList.add("d-none");
+                          calculatedAmount.classList.add("d-none");
+                          calculatedAmount.textContent = "";
+
+                          if (this.value === "monthly") {
+                            monthlyInfo.classList.remove("d-none");
+                          } else if (this.value === "percentage") {
+                            percentageBox.classList.remove("d-none");
+                            if (percentageSelect) percentageSelect.dispatchEvent(new Event("change"));
+                          }
+                        });
+
+                        if (percentageSelect) {
+                          percentageSelect.addEventListener("change", function () {
+                            const percent = parseFloat(this.value);
+                            const amount = (percent / 100) * balance;
+                            calculatedAmount.textContent = `You will pay ₦${amount.toFixed(2)} (${percent}%)`;
+                            calculatedAmount.classList.remove("d-none");
+                          });
+                        }
+                      });
+                    </script>
+                    {% endwith %}
+                  {% else %}
+                    <span class="badge bg-success">Completed</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="alert alert-info mt-4">You have no orders yet.</div>
+    {% endif %}
+  </div>
+  <div class="modal fade" id="autoBalanceModal" tabindex="-1" aria-labelledby="autoBalanceModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-info text-white">
+          <h5 class="modal-title" id="autoBalanceModalLabel">Auto Balance Notice</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="autoBalanceModalBody">
+          <!-- Filled by script -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Okay</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% comment %} /* */ {% endcomment %}
+</main>
+
+<script>
+  $(document).ready(function () {
+    $('.auto-balance-toggle').on('change', function () {
+      const isChecked = $(this).is(':checked');
+      const title = $(this).data('title');
+      const modalBody = $('#autoBalanceModalBody');
+
+      if (isChecked) {
+        modalBody.text(`Auto Balance has been enabled for "${title}".`);
+      } else {
+        modalBody.text(`Auto Balance has been disabled for "${title}".`);
+      }
+
+      const modal = new bootstrap.Modal(document.getElementById('autoBalanceModal'));
+      modal.show();
+    });
+  });
+</script>
+
+  <script>
+    const toggle = document.getElementById('autoBalanceToggle');
+    const modal = new bootstrap.Modal(document.getElementById('autoBalanceModal'));
+  
+    toggle.addEventListener('change', function () {
+      if (this.checked) {
+        modal.show(); // Show modal when toggled ON
+      } else {
+        // Optionally send OFF update
+        fetch("", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: false })
+        });
+      }
+    });
+  
+    document.getElementById('confirmAutoBalance').addEventListener('click', function () {
+      modal.hide(); // Hide the modal after confirmation
+  
+      // Optional: Send update to backend
+      fetch("", {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": "{{ csrf_token }}",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: true })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Auto balance turned ON", data);
+      });
+  
+    });
+  </script>
+  <script>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.auto-balance-toggle').forEach(function(toggle) {
+          toggle.addEventListener('change', function() {
+            const isChecked = this.checked;
+            const title = this.getAttribute('data-title');
+            const message = isChecked 
+              ? `<strong>${title}</strong> has been <span class="text-success">enabled</span> for Auto Balance.` 
+              : `<strong>${title}</strong> has been <span class="text-danger">disabled</span> for Auto Balance.`;
+    
+            // Set the modal message
+            document.getElementById('autoBalanceModalBody').innerHTML = message;
+    
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('autoBalanceModal'));
+            modal.show();
+          });
+        });
+      });
+    </script>
+    
+    
+  </script>
+<!-- Bootstrap Icons -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+<style>
+  .modal-content {
+    border-radius: 1rem;
+  }
+  .modal-title {
+    font-size: 1.2rem;
+  }
+  .table td, .table th {
+    vertical-align: middle;
+  }
+</style>
 
 {% include 'Dashboard/footer.html' %}

@@ -1,21 +1,87 @@
 {% load static %}
 {% include 'header.html' %}
 
+<style>
+  body {
+    background: #f1f5f9;
+    font-family: 'Segoe UI', sans-serif;
+  }
+
+  .wallet-banner {
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.5), black);
+    border-radius: 1rem;
+    padding: 0.2rem 0.2rem;
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 300;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .cart-card {
+    border-radius: 1rem;
+    overflow: hidden;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .cart-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  .cart-card img {
+    height: 200px;
+    object-fit: cover;
+    border-bottom: 1px solid #eee;
+  }
+
+  .btn-custom {
+    border-radius: 2rem;
+    font-weight: 500;
+    padding: 0.6rem 1.5rem;
+    transition: 0.3s ease;
+  }
+
+  .btn-primary {
+    background: linear-gradient(to right, #007bff, #00c6ff);
+    border: none;
+  }
+
+  .btn-outline-success:hover {
+    background: #198754;
+    color: #fff;
+  }
+
+  .price-section h5 {
+    font-weight: 600;
+  }
+
+  .alert-info {
+    border-radius: 0.8rem;
+  }
+</style>
+
 <div class="container my-5">
-  <h3 class="mb-4">Your Cart</h3>
+  <h3 class="mb-4 fw-bold">Your Cart</h3>
+
+  <div class="wallet-banner d-flex justify-content-between align-items-center mb-4 w-50">
+    <span>Wallet Balance:</span>
+    <span class="text-light fw-bold">₦{{ request.user.wallet.balance|floatformat:2 }}</span>
+  </div>
 
   {% if cart %}
-    <div class="row row-cols-1 row-cols-md-2 g-4">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
       {% for id, item in cart.items %}
         <div class="col">
-          <div class="card shadow-sm h-100">
+          <div class="card cart-card h-100">
             {% if item.image %}
-              <img src="{{ item.image }}" class="card-img-top" alt="{{ item.title }}" style="height: 200px; object-fit: cover;">
+              <img src="{{ item.image }}" class="card-img-top" alt="{{ item.title }}">
             {% endif %}
             <div class="card-body">
-              <h5 class="card-title">{{ item.title }}</h5>
+              <h5 class="card-title fw-semibold">{{ item.title }}</h5>
               <p><strong>Full Price:</strong> ₦{{ item.price }}</p>
-              
+
               {% if item.initial_deposit_amount %}
                 <p><strong>Deposit %:</strong> {{ item.initial_deposit_percent }}%</p>
                 <p><strong>Deposit Amount:</strong> ₦{{ item.initial_deposit_amount }}</p>
@@ -23,28 +89,31 @@
                 <p><strong>Deposit %:</strong> 100%</p>
                 <p><strong>Deposit Amount:</strong> ₦{{ item.price }}</p>
               {% endif %}
-              <a href="{% url 'remove_from_cart' id %}" class="btn btn-danger">Remove from Cart</a>
 
+              <a href="{% url 'remove_from_cart' id %}" class="btn btn-sm btn-danger mt-2">Remove</a>
             </div>
           </div>
-          
         </div>
       {% endfor %}
     </div>
 
-    <div class="mt-4">
+    <div class="mt-5 price-section">
       <h5>Total Price: <span class="text-primary">₦{{ total_price|floatformat:2 }}</span></h5>
 
       {% if total_deposit %}
         <h5>Total Deposit: <span class="text-success">₦{{ total_deposit|floatformat:2 }}</span></h5>
       {% endif %}
 
-      <button id="payWithPaystack" class="btn btn-primary mt-3">Proceed to Checkout</button>
+      <div class="d-flex gap-3 flex-wrap mt-4">
+        <button id="payWithPaystack" class="btn btn-custom btn-primary"><i class='fa fa-briefcase'></i> Pay With Paystack</button>
+        <button id="payWithWallet" class="btn btn-custom btn-outline-success"><i class='fa fa-wallet'></i>Pay With Wallet</button>
+      </div>
     </div>
   {% else %}
-    <div class="alert alert-info">Your cart is empty.</div>
+    <div class="alert alert-info">our cart is currently empty.</div>
   {% endif %}
 </div>
+
 <!-- Paystack Script -->
 <script src="https://js.paystack.co/v1/inline.js"></script>
 
@@ -53,13 +122,12 @@
     e.preventDefault();
 
     var handler = PaystackPop.setup({
-      key: '{{ PAYSTACK_PUBLIC_KEY }}',  // Set this in context or use your actual test key here
+      key: '{{ PAYSTACK_PUBLIC_KEY }}',
       email: '{{ request.user.email }}',
-      amount: {{ total_deposit|default:total_price|floatformat:2 }} * 100,  // in kobo
+      amount: {{ total_deposit|default:total_price|floatformat:2 }} * 100,
       currency: "NGN",
-      ref: 'TX'+Math.floor((Math.random() * 1000000000) + 1), // Unique transaction ref
+      ref: 'TX' + Math.floor((Math.random() * 1000000000) + 1),
       callback: function (response) {
-        // handle success
         window.location.href = "{% url 'verify_payment' %}?reference=" + response.reference;
       },
       onClose: function () {
@@ -69,6 +137,33 @@
 
     handler.openIframe();
   });
+
+</script>
+<script>
+  document.getElementById('payWithWallet').addEventListener('click', function (e) {
+    e.preventDefault();
+  
+    fetch("{% url 'pay_with_wallet' %}", {
+      method: "GET",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === "success") {
+        alert(data.message);
+        window.location.href = data.redirect_url;  // ✅ Redirect here
+      } else {
+        alert(data.message);
+      }
+    })
+    .catch(error => {
+      console.error("Wallet Payment Error:", error);
+      alert("Something went wrong. Try again.");
+    });
+  });
+  
 </script>
 
 {% include 'footer.html' %}

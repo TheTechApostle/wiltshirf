@@ -33,7 +33,7 @@
                 <!--begin::Small Box Widget 1-->
                 <div class="small-box text-bg-primary">
                   <div class="inner">
-                    <h3>{{ propertyCount }}</h3>
+                    <h3>{{ purchased_xCount }}</h3>
                     <p>Total Property </p>
                   </div>
                   <svg
@@ -76,7 +76,7 @@
                     ></path>
                   </svg>
                   <a
-                    href="#"
+                    href="{% url 'payment_history' %}"
                     class="small-box-footer link-light link-underline-opacity-0 link-underline-opacity-50-hover"
                   >
                     More info <i class="bi bi-link-45deg"></i>
@@ -119,12 +119,18 @@
                 <!--end::Small Box Widget 3-->
               </div>
               <!--end::Col-->
-              {% if is_client %}
+              
                 <div class="col-lg-3 col-6">
                   <div class="small-box text-bg-info">
                     <div class="inner">
-                      <h3>{{ payment_progress }}<sup class="fs-5">%</sup></h3>
-                      <p>Payment Progress</p>
+                      {% if is_client %}                      
+                        <h3>{{ payment_progress }}<sup class="fs-5">%</sup></h3>
+                        <p>Payment Progress</p>
+                      {% endif %}
+                      {% if is_admin %}
+                        <h3>{{ total_visitors }}</h3>
+                        <p>Total Active Visitors</p>
+                      {% endif %}
                     </div>
                     <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M5 3v18l15-9L5 3z" />
@@ -132,21 +138,9 @@
                     <a href="#" class="small-box-footer">More info <i class="bi bi-link-45deg"></i></a>
                   </div>
                 </div>
-                {% endif %}
-                {% if is_admin %}
-                  <div class="col-lg-3 col-6">
-                    <div class="small-box text-bg-secondary">
-                      <div class="inner">
-                        <h3>{{ total_visitors }}</h3>
-                        <p>Total Active Visitors</p>
-                      </div>
-                      <svg class="small-box-icon" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.7 0 4.9-2.2 4.9-4.9S14.7 2.2 12 2.2 7.1 4.4 7.1 7.1 9.3 12 12 12zm0 1.8c-3.3 0-9.9 1.7-9.9 5v2h19.8v-2c0-3.3-6.6-5-9.9-5z"/>
-                      </svg>
-                      <a href="#" class="small-box-footer">More info <i class="bi bi-link-45deg"></i></a>
-                    </div>
-                  </div>
-                {% endif %}
+               
+               
+                
 
               <!--end::Col-->
             </div>
@@ -156,24 +150,29 @@
              
                 <div class="row">
                   <div class="col-lg-4 col-sm-11 col-md-6 bg-slate-200 pt-2 mb-2">
-                    {% if property %}
+                    {% if property and property.exists %}
                       <div class="list-group" id="property-list">
                         {% for item in property %}
                           <div class="list-group-item list-group-item-action mb-3 rounded shadow-sm property-card"
                                data-location="{{ item.location|escapejs }}">
                             <div class="d-flex align-items-center">
-                              {% with image=item.images.all.0 %}
+                              
+                              {% with image=item.images.first %}
                                 {% if image %}
-                                  <img src="{{ image.image.url }}" alt="{{ item.title }}" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                                  <img src="{{ image.image.url }}" alt="{{ item.title }}" class="rounded me-3"
+                                       style="width: 80px; height: 80px; object-fit: cover;">
                                 {% else %}
-                                  <img src="{% static 'img/default-property.jpg' %}" alt="Default Image" class="rounded me-3" style="width: 80px; height: 80px; object-fit: cover;">
+                                  <img src="{% static 'img/default-property.jpg' %}" alt="Default" class="rounded me-3"
+                                       style="width: 80px; height: 80px; object-fit: cover;">
                                 {% endif %}
                               {% endwith %}
                   
                               <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between align-items-start">
                                   <h5 class="mb-1 text-primary fw-bold">{{ item.title }}</h5>
-                                  <span class="badge bg-success">Purchased</span>
+                                  {% if is_client %}
+                                    <span class="badge bg-success">Purchased</span>
+                                  {% endif %}
                                 </div>
                                 <p class="mb-1 text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> {{ item.location }}</p>
                                 <div class="d-flex flex-wrap gap-2">
@@ -193,11 +192,18 @@
                     {% else %}
                       <div class="alert alert-warning text-center">You have no purchased properties yet.</div>
                     {% endif %}
-                  
-                    <div class="d-flex justify-content-center my-2">
-                      <a class='btn btn-small btn-outline-primary' href=''>View all Properties</a>
-                    </div>
+                    {% if is_admin %}
+                      <div class="d-flex justify-content-center my-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'my_orders' %}">View All Properties</a>
+                      </div>
+                    {% endif %}
+                    {% if is_client %}
+                      <div class="d-flex justify-content-center my-2">
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'my_orders' %}">View All Properties</a>
+                      </div>
+                    {% endif %}
                   </div>
+                  
                   
                   <div class="col-lg-4 col-sm-12 mb-4">
                     <div class="card shadow-sm rounded-4">

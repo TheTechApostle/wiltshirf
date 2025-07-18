@@ -96,6 +96,7 @@ class PropertySubscription(models.Model):
     monthly_payment = models.DecimalField(max_digits=12, decimal_places=2)
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
 
     is_active = models.BooleanField(default=True)
     started_at = models.DateField(auto_now_add=True)
@@ -165,7 +166,7 @@ class SubscriptionPropertyPlan(models.Model):
     
     initial_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     monthly_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-
+    auto_balance = models.BooleanField(default=False)
     def __str__(self):
         return f"{self.property.title} – {self.duration_months} Month Plan"
     
@@ -206,9 +207,14 @@ class Transaction(models.Model):
         return f"{self.user.username} - {self.reference}"
 
 class PurchasedProduct(models.Model):
+    paymentMethod = [
+        ('Wallet', 'Wallet'),
+        ('Paystack', 'Paystack')
+    ]
     user = models.ForeignKey(User, on_delete=models.CASCADE) 
     transaction = models.ForeignKey('Transaction', on_delete=models.CASCADE, related_name='products')
     title = models.CharField(max_length=255)
+    method= models.CharField(choices=paymentMethod, max_length=50)
     price = models.FloatField()
     deposit = models.FloatField(null=True, blank=True)
     to_balance = models.FloatField(null=True, blank=True)
@@ -248,4 +254,25 @@ class WalletTransaction(models.Model):
         return f"₦{self.amount} - {self.reference}"
 
 
+# models.py
 
+class PaymentTransactionTrash(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=20)
+    reference = models.CharField(max_length=100, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    # Add soft delete flag
+    is_trashed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - ₦{self.amount}"
+
+class Message(models.Model):
+    sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
+    recipient = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']

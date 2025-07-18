@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from .models import *
 import uuid
+from django.contrib.auth import get_user_model
 from django.http import JsonResponse
+from django.db import transaction
 from django.db.models import Count, Prefetch
 from .forms import *
 from django.forms import modelformset_factory
@@ -34,6 +36,9 @@ from collections import OrderedDict
 import csv
 from django.views.decorators.csrf import csrf_exempt
 from .utils import is_admin, is_client
+from django.views.decorators.http import require_GET
+from django.utils import timezone
+from decimal import Decimal, InvalidOperation
 # Create your views here.
 
 
@@ -88,22 +93,26 @@ def createSlider(request):
 
 @login_required(login_url='LoginUser')  # Ensure the login URL name is correct
 def propertyList(request):
-    # Get all properties
+    # Get all distinct properties, most recent first
     property_list = Property.objects.distinct().order_by('-date_added')
 
-    # Pagination (6 per page)
-    paginator = Paginator(property_list, 6)
+    # Paginate: 10 properties per page
+    paginator = Paginator(property_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Total number of all properties
-    total_property_count = Property.objects.count()
+    # Total number of properties
+    total_property_count = property_list.count()
 
-    # Group by location (change to 'country' if needed)
-    country_property_count = Property.objects.values('location').annotate(total=Count('id')).order_by('-total')
+    # Count grouped by location
+    country_property_count = (
+        Property.objects.values('location')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
 
-    # Transactions (optional)
-    transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')
+    # Optional: user’s recent transactions
+    transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')[:10]
 
     context = {
         'page_obj': page_obj,
@@ -114,44 +123,61 @@ def propertyList(request):
     return render(request, 'Dashboard/property_list.html', context)
 
      
-@login_required(login_url="LoginUser")
+@login_required(login_url='LoginUser')
 def Dashboard(request):
-    getDate =  datetime.now().year
-    Google_API_KEY = 'AIzaSyDQUDUVxVx_y7t5JvAHfVC_hYpgsHlU8Io'
+    Google_API_KEY = settings.GOOGLE_MAPS_API_KEY
     user = request.user
     userFirstname = user.first_name
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
 
+    # Initialize default values
     total_investment = 0
     to_balance = 0
     payment_progress = 0
     total_visitors = 0
     property_count = 0
-    properties = Property.objects.none()
-
-    # Common filters
+    properties = Property.objects.none()  # Default empty queryset
+    recent_payments = 0
+    full_payment_history_url =0
     if is_admin_user:
         recent_payments = Transaction.objects.all().order_by('-created_at')[:5]
+        # Admin sees all properties
         properties = Property.objects.all().order_by('-date_added')[:7]
-        total_visitors = Session.objects.filter(expire_date__gte=datetime.now()).count()
+        property_count = properties.count()
+        purchased_xCount = PurchasedProduct.objects.all().count()
+        # Sum deposits and outstanding balances across all purchases
         total_investment = PurchasedProduct.objects.aggregate(total=Sum('deposit'))['total'] or 0
         to_balance = PurchasedProduct.objects.aggregate(total=Sum('to_balance'))['total'] or 0
-    else:
-        recent_payments = Transaction.objects.filter(user=user).order_by('-created_at')[:5]
+
+        # Count active sessions (as proxy for visitors)
+        total_visitors = Session.objects.filter(expire_date__gte=datetime.now()).count()
+
+    elif is_client_user:
+        # Transaction History
+        recent_payments = Transaction.objects.filter(user=user).order_by('-created_at')[:5]  # Fetch latest 5
+        full_payment_history_url = reverse('payment_history')  # Define this URL in urls.py
+        # Client sees only their purchased property titles
         purchased_titles = PurchasedProduct.objects.filter(user=user).values_list('title', flat=True)
+        purchased_xCount = PurchasedProduct.objects.filter(user=user).count()
+        # Filter Property based on titles
         properties = Property.objects.prefetch_related('images').filter(title__in=purchased_titles).order_by('-date_added')[:5]
+        property_count = properties.count()
+
+        # Calculate investment and balance for this user
         total_investment = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('deposit'))['total'] or 0
         to_balance = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('to_balance'))['total'] or 0
         total_price = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('price'))['total'] or 0
+
+        # Calculate payment progress percentage
         if total_price and total_price > 0:
             payment_progress = round((total_investment / total_price) * 100, 2)
 
-    full_payment_history_url = reverse('payment_history')
-    property_count = properties.count()
+    # Fetch user's transactions (if any)
     transactions = Transaction.objects.filter(user=user).order_by('-created_at')
-
-    # Chart Data: Last 6 months
+    getDate = datetime.now().year
+    # Context passed to the template
+    # Chart Data
     labels = []
     data = []
 
@@ -174,12 +200,13 @@ def Dashboard(request):
             ).aggregate(total=Sum('amount'))['total'] or 0
 
         data.append(round(total, 2))
-
     context = {
         'recent_payments': recent_payments,
         'full_payment_history_url': full_payment_history_url,
         'property': properties,
-        'getDate':getDate,
+        'getDate': getDate,
+        'purchased_xCount': purchased_xCount,
+        'GoogleAPIKEY':Google_API_KEY,
         'propertyCount': property_count,
         'user': user,
         'userFirstname': userFirstname,
@@ -190,14 +217,11 @@ def Dashboard(request):
         'payment_progress': payment_progress,
         'total_visitors': total_visitors,
         'transactions': transactions,
-        'GoogleAPIKEY': Google_API_KEY,
         'chart_labels': labels,
         'chart_data': data,
     }
 
     return render(request, 'Dashboard/index.html', context)
-
-
 
 # autocreate wallet
 # @login_required(login_url="LoginUser")
@@ -242,7 +266,7 @@ def initiate_wallet_payment(request):
                 "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
                 "Content-Type": "application/json",
             }
-
+            
             data = {
                 "email": email,
                 "amount": amount,
@@ -332,12 +356,16 @@ def payment_history(request):
     is_admin_user = is_admin(user)
 
     status_filter = request.GET.get('status')
+    reference_filter = request.GET.get('reference')
 
     # Filter the transactions
     queryset = Transaction.objects.all().order_by('-created_at') if is_admin_user else Transaction.objects.filter(user=user).order_by('-created_at')
 
     if status_filter:
         queryset = queryset.filter(status__iexact=status_filter)
+    
+    if reference_filter:
+        queryset = queryset.filter(reference__iexact=reference_filter)
 
     # Fetch amount paid and to_balance
     if is_admin_user:
@@ -346,6 +374,21 @@ def payment_history(request):
     else:
         total_paid = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('deposit'))['total'] or 0
         total_balance = PurchasedProduct.objects.filter(user=user).aggregate(total=Sum('to_balance'))['total'] or 0
+
+    for tx in queryset:
+        products = tx.products.all()  # thanks to related_name='products'
+
+        if products.exists():
+            product = products.first()
+
+            # Safely get deposit and balance values
+            deposit = product.deposit if product.deposit is not None else 0
+            balance = product.to_balance if product.to_balance is not None else 0
+
+            tx.description = f"{product.title} | Deposit: ₦{deposit:,.2f} | Balance: ₦{balance:,.2f}"
+        else:
+            tx.description = "No product attached"
+
 
     # Payment progress
     payment_progress = 0
@@ -390,7 +433,72 @@ def payment_history(request):
     }
     return render(request, 'Dashboard/payment_history.html', context)
 
-@login_required(login_url='LoginUser')  # Ensure the login URL name is correct
+
+@login_required
+def delete_payment(request, payment_id):
+    user = request.user    
+    is_client_user = is_client(user)
+    is_admin_user = is_admin(user)
+    payment = get_object_or_404(Transaction, id=payment_id)
+    if is_admin_user:
+    # Optional: check if user is admin or payment belongs to the user    
+        PaymentTransactionTrash.objects.create(
+            user=payment.user,
+            amount=payment.amount,
+            status=payment.status,
+            reference=payment.reference,
+            created_at=payment.created_at,
+        )
+        payment.delete()
+        messages.success(request, "Payment Transaction Moved to Trash.")
+    else:
+        messages.error(request, "You are not authorized to delete this payment.")
+
+    return redirect('payment_history')  
+
+# view trashed transaction
+@login_required
+def trashed_payments(request):
+    user  = request.user
+    is_client_user = is_client(user)
+    is_admin_user = is_admin(user)
+    if is_admin_user:
+        trashed = PaymentTransactionTrash.objects.all()
+    else:
+        trashed = PaymentTransactionTrash.objects.filter(user=request.user)
+
+    context = {
+        'is_client': is_client_user,
+        'is_admin': is_admin_user,
+        'trashed_payments': trashed
+    }
+    return render(request, 'Dashboard/TransactionTrash.html', context)
+
+@login_required(login_url='LoginUser')
+def restore_payment(request, payment_id):
+    trash = get_object_or_404(PaymentTransactionTrash, id=payment_id)
+
+    Transaction.objects.create(
+        user=trash.user,
+        amount=trash.amount,
+        status=trash.status,
+        reference=trash.reference,
+        created_at=trash.created_at
+    )
+
+    trash.delete()
+    messages.success(request, "Payment restored successfully.")
+    return redirect('trashed_payments')
+
+
+@login_required(login_url='LoginUser')
+def permanent_delete_payment(request, payment_id):
+    trash = get_object_or_404(PaymentTransactionTrash, id=payment_id)
+    trash.delete()
+    messages.success(request, "Payment permanently deleted.")
+    return redirect('trashed_payments')
+
+@login_required(login_url='LoginUser') 
 def propertyList(request):
     # Get all properties
     user= request.user
@@ -599,7 +707,7 @@ def register_client(request):
     return render(request, 'register_client.html', {'form': form})
 
 def LoginUser(request):
-    next_url = request.GET.get('next') or request.POST.get('next') or '/'
+    next_url = request.GET.get('next') or request.POST.get('next') or None
     
     if request.method == "POST":
         form = LoginForm(request=request, data=request.POST)
@@ -614,7 +722,7 @@ def LoginUser(request):
     else:
         form = LoginForm()
 
-    context = {'form': form, 'next': next_url}
+    context = {'form': form, 'next': next_url or ''}
     return render(request, 'login.html', context)
 
     
@@ -634,34 +742,41 @@ def add_to_cart(request, id):
     cart = request.session.get('cart', {})
 
     if str(id) in cart:
-        return JsonResponse({'message': 'This Property is already in your cart'}, status=200)
+        return JsonResponse({'message': 'This property is already in your cart.'}, status=200)
 
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
-            percentage = body.get('percentage', 100)
-            deposit = body.get('deposit', 0)
+
+            # Handle and sanitize input
+            percentage = int(body.get('percentage', 100))
+            deposit_raw = body.get('deposit', 0)
+
+            try:
+                deposit = Decimal(str(deposit_raw))
+            except (InvalidOperation, ValueError):
+                return JsonResponse({'message': 'Invalid deposit amount.'}, status=400)
 
             cart[str(id)] = {
                 'title': property_item.title,
-                'price': str(property_item.price),
-                'initial_deposit_percent': percentage,
-                'initial_deposit_amount': deposit,
+                'price': str(property_item.price),  # Stored as string for JSON compatibility
+                'initial_deposit_percent': str(percentage),
+                'initial_deposit_amount': str(deposit),  # Always store as string
                 'image': property_item.images.first().image.url if property_item.images.exists() else ''
             }
 
             request.session['cart'] = cart
             request.session.modified = True
 
-            return JsonResponse({'message': 'Property added to your cart'}, status=201)
+            return JsonResponse({'message': 'Property added to your cart.'}, status=201)
 
         except Exception as e:
-            return JsonResponse({'message': 'Error processing cart item'}, status=400)
+            return JsonResponse({'message': 'Error processing cart item.', 'error': str(e)}, status=400)
 
-    return JsonResponse({'message': 'Invalid request'}, status=405)
+    return JsonResponse({'message': 'Invalid request method.'}, status=405)
 
 
-@login_required
+@login_required(login_url='LoginUser')
 def view_cart(request):
     cart = request.session.get('cart', {})
 
@@ -691,7 +806,7 @@ def view_cart(request):
 
 
 
-@login_required
+@login_required(login_url='LoginUser')
 def remove_from_cart(request, id):
     cart = request.session.get('cart', {})
     if id in cart:
@@ -706,20 +821,23 @@ def add_subscription_plan(request, property_id):
 
     if property.allSubscription != 'Yes':
         messages.error(request, "This property does not support subscription plans.")
-        return redirect('viewProperty', id=property.id)
+        return redirect('add_subscription_plan')
+
+    # Try to fetch an existing plan (assuming one plan per property)
+    existing_plan = SubscriptionPropertyPlan.objects.filter(property=property).first()
 
     if request.method == 'POST':
-        form = SubscriptionPropertyPlanForm(request.POST)
+        form = SubscriptionPropertyPlanForm(request.POST, instance=existing_plan)
         if form.is_valid():
             plan = form.save(commit=False)
             plan.property = property
 
-            # Do calculations here
             total_price = property.price
             deposit_percent = plan.initial_deposit_percent
 
             # Calculate initial payment
             initial_payment = total_price * Decimal(deposit_percent / 100)
+            plan.auto_balance = True
             plan.initial_payment = initial_payment
 
             # Calculate monthly payment
@@ -731,16 +849,18 @@ def add_subscription_plan(request, property_id):
                 plan.monthly_payment = Decimal("0.00")
 
             plan.save()
-            messages.success(request, "Subscription plan added successfully.")
-            return redirect('viewProperty', id=property.id)
+            messages.success(request, "Subscription plan saved successfully.")
+            return redirect('add_subscription_plan', property_id=property.id)
     else:
-        form = SubscriptionPropertyPlanForm()
+        form = SubscriptionPropertyPlanForm(instance=existing_plan)
 
-    
+    return render(request, 'Dashboard/add_plan.html', {
+        'form': form,
+        'property': property,
+        'is_update': existing_plan is not None
+    })
 
-    return render(request, 'Dashboard/add_plan.html', {'form': form, 'property': property})
-
-
+@login_required(login_url='LoginUser')
 def payment_success(request):
     reference = request.GET.get('reference')
     # Optionally verify with Paystack API here using secret key
@@ -749,7 +869,7 @@ def payment_success(request):
 
 
 
-@login_required
+@login_required(login_url='LoginUser')
 def verify_payment(request):
     reference = request.GET.get('reference')
     
@@ -792,6 +912,7 @@ def verify_payment(request):
                 user = request.user,
                 transaction=transaction,
                 title=item['title'],
+                method="Paystack",
                 price=price,
                 deposit=deposit,
                 to_balance = to_balance
@@ -817,7 +938,7 @@ def verify_payment(request):
         messages.error(request, "Payment verification failed.")
         return redirect('view_cart')
     
-@login_required
+@login_required(login_url='LoginUser')
 def paymentVerification(request, reference):
     transaction = get_object_or_404(Transaction, reference=reference)
     products = transaction.products.all()  # using related_name from the model
@@ -830,19 +951,188 @@ def paymentVerification(request, reference):
 
 
 
+def compute_payment_details(price, deposit_percent, duration_months):
+    """
+    Calculate initial and monthly payment for a property subscription plan.
+    """
+    total_price = Decimal(price)
+    deposit = total_price * Decimal(deposit_percent) / Decimal(100)
+    remaining = total_price - deposit
 
-@login_required
+    if duration_months > 1:
+        monthly_payment = remaining / Decimal(duration_months)
+    else:
+        monthly_payment = Decimal("0.00")
+
+    return round(deposit, 2), round(monthly_payment, 2)
+
+
+
+login_required(login_url="LoginUser")
 def my_orders(request):
     user = request.user
     username = user.username
     is_client_user = is_client(user)
-    orders = PurchasedProduct.objects.filter(user=request.user).order_by('-date_added')
+    is_admin_user = is_admin(user)
+    orders = {}
+
+    # Get all purchased orders for the user
+    if is_client_user:
+        orders = PurchasedProduct.objects.filter(user=user)
+    if is_admin_user:
+        orders = PurchasedProduct.objects.all()
+
+    # Optional filter by user (only for admin)
+    selected_user_id = request.GET.get("user")
+    if selected_user_id:
+        orders = orders.filter(user_id=selected_user_id)
+
+    # Optional filter by day/month/year
+    filter_type = request.GET.get('filter')
+    today = datetime.today()
+    if filter_type == 'day':
+        orders = orders.filter(date_added__date=today.date())
+    elif filter_type == 'month':
+        orders = orders.filter(date_added__month=today.month)
+    elif filter_type == 'year':
+        orders = orders.filter(date_added__year=today.year)
+
+    # Optional search
+    search_query = request.GET.get('search')
+    if search_query:
+        q = search_query.lower()
+        if q in ["completed", "fully paid", "paid", "done"]:
+            orders = orders.filter(to_balance__lte=0)
+        elif q in ["owing", "pending", "not paid", "balance", "with balance"]:
+            orders = orders.filter(to_balance__gt=0)
+        else:
+            orders = orders.filter(
+                Q(title__icontains=search_query) |
+                Q(method__icontains=search_query)
+            )
+
+    orders = orders.order_by('-date_added')
+
+    # Attach subscription plan to each order
+    for order in orders:
+        try:
+            property_obj = Property.objects.get(title=order.title)
+            subscription_plan = SubscriptionPropertyPlan.objects.filter(property=property_obj).first()
+            order.subscription_plan = subscription_plan
+        except Property.DoesNotExist:
+            order.subscription_plan = None
+
+    percentage_options = [str(i) for i in range(30, 101, 10)]
+
+    # Get all non-admin users
+    admin_group = Group.objects.get(name='admin')
+    admin_users = admin_group.user_set.all()
+    non_admin_users = get_user_model().objects.exclude(id__in=admin_users)
+
+    return render(request, 'Dashboard/my_orders.html', {
+        'orders': orders,
+        'is_client': is_client_user,
+        'is_admin': is_admin_user,
+        'user_username': username,
+        'percentage_options': percentage_options,
+        'PayStackKey': settings.PAYSTACK_PUBLIC_KEY,
+        'all_users': non_admin_users if request.user.is_superuser else None,
+        'selected_user_id': selected_user_id,
+    })
+@login_required(login_url="LoginUser")
+def process_payment(request, product_id):
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect("my_orders")
+
+    product = get_object_or_404(PurchasedProduct, id=product_id, user=request.user)
+    method = request.POST.get("method")
+    payment_type = request.POST.get("payment_option")  # corrected name
+    balance = Decimal(product.to_balance or 0)
+
+    if balance <= 0:
+        messages.error(request, "No remaining balance to pay.")
+        return redirect("my_orders")
+
+    # Determine amount to pay
+    if payment_type == "percentage":
+        try:
+            percent = float(request.POST.get("percentage", 0))
+            if percent < 30 or percent > 100:
+                messages.error(request, "Percentage must be between 30% and 100%.")
+                return redirect("my_orders")
+            amount = (Decimal(percent) / 100) * balance
+        except ValueError:
+            messages.error(request, "Invalid percentage value.")
+            return redirect("my_orders")
+    else:
+        amount = balance / 6  # Monthly payment
+
+    # Wallet payment
+    if method == "wallet":
+        wallet = getattr(request.user, 'wallet', None)
+
+        if not wallet:
+            messages.error(request, "Wallet not found for user.")
+            return redirect("my_orders")
+
+        if wallet.balance < amount:
+            messages.error(request, "Insufficient wallet balance.")
+            return redirect("my_orders")
+
+        wallet.balance -= amount
+        wallet.save()
+
+        Transaction.objects.create(
+            user=request.user,
+            reference=str(uuid.uuid4()),
+            amount=amount,
+            status="success"
+        )
+
+        product.to_balance = float(balance - amount)
+        product.save()
+
+        messages.success(request, f"Wallet payment of ₦{amount:.2f} successful.")
+        return redirect("my_orders")
     
-    return render(request, 'Dashboard/my_orders.html', {'orders': orders, 'is_client':is_client_user, 'user_username':username})
+    # Paystack payment
+    elif method == "paystack":
+        paystack_secret = settings.PAYSTACK_SECRET_KEY
+        callable_url = request.build_absolute_uri(reverse('verify_wallet_payment'))
 
+        headers = {
+            "Authorization": f"Bearer {paystack_secret}",
+            "Content-Type": "application/json",
+        }
 
+        data = {
+            "email": request.user.email,
+            "amount": int(amount * 100),  # in kobo
+            "reference": str(uuid.uuid4()),
+            "callback_url": callable_url,
+        }
 
-from django.utils import timezone
+        response = requests.post("https://api.paystack.co/transaction/initialize", json=data, headers=headers)
+        res_data = response.json()
+
+        if response.status_code == 200 and res_data['status']:
+            # Save pending transaction
+            Transaction.objects.create(
+                user=request.user,
+                reference=data["reference"],
+                amount=amount,
+                status="pending"
+            )
+            return redirect(res_data['data']['authorization_url'])
+        else:
+            messages.error(request, "Failed to initiate Paystack payment.")
+            return redirect("my_orders")
+
+    else:
+        messages.error(request, "Unsupported payment method.")
+        return redirect("my_orders")
+
 def property_lists(request):
     query = request.GET.get("q", "")
     plan = request.GET.get("plan", "")
@@ -917,3 +1207,155 @@ def PropertyTypeHome(request):
     }
 
     return render(request, 'PropertyTypeHome.html', context)
+
+
+# views.py
+
+@login_required
+@require_GET
+def pay_with_wallet(request):
+    try:
+        cart = request.session.get('cart', {})
+        if not cart:
+            return JsonResponse({'status': 'fail', 'message': 'Your cart is empty.'}, status=400)
+
+        wallet = Wallet.objects.select_for_update().get(user=request.user)
+        total_deposit = Decimal('0.00')
+
+        with transaction.atomic():
+            for item in cart.values():
+                deposit_raw = item.get('initial_deposit_amount') or item.get('price')
+                value = safe_decimal(deposit_raw)
+
+                if value is None:
+                    return JsonResponse({'status': 'fail', 'message': 'Invalid item amount in cart.'}, status=400)
+
+                total_deposit += value
+
+            if wallet.balance < total_deposit:
+                return JsonResponse({'status': 'fail', 'message': 'Insufficient wallet balance.'}, status=400)
+
+            # Deduct from wallet
+            wallet.balance -= total_deposit
+            wallet.save()
+
+            # Create a Transaction record
+            reference = f"WL-{uuid.uuid4().hex[:12]}"
+            transaction_record = Transaction.objects.create(
+                user=request.user,
+                amount=total_deposit,
+                reference=reference,
+                status='success'
+            )
+
+            # Create PurchasedProduct entries
+            for property_id, item in cart.items():
+                property_obj = Property.objects.filter(id=property_id).first()
+                price = safe_decimal(item.get('price'))
+                deposit = safe_decimal(item.get('initial_deposit_amount') or price)
+                to_balance = (price or Decimal('0.00')) - (deposit or Decimal('0.00'))
+
+                PurchasedProduct.objects.create(
+                    user=request.user,
+                    transaction=transaction_record,                    
+                    title=item.get('title', 'Unknown'),
+                    price=price,
+                    method="Wallet",
+                    deposit=deposit,
+                    to_balance=to_balance
+                )
+
+            # Clear cart
+            request.session['cart'] = {}
+            request.session.modified = True
+
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Payment successful using wallet.',
+            'redirect_url': reverse('Dashboard')
+        })
+
+    except Wallet.DoesNotExist:
+        return JsonResponse({'status': 'fail', 'message': 'Wallet not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'fail', 'message': f'Server error: {str(e)}'}, status=500)
+    
+
+def is_admin(user):
+    return user.is_staff or user.is_superuser
+
+@login_required
+@user_passes_test(is_admin)
+def chat_dashboard(request):
+    clients = User.objects.exclude(id=request.user.id)
+    return render(request, 'Dashboard/chat.html', {'clients': clients})
+
+
+@login_required
+@user_passes_test(is_admin)
+def chat_with_user(request, user_id):
+    user =  request.user
+    is_admin_user = is_admin(user)
+    is_client_user = is_client(user)
+    recipient = get_object_or_404(User, id=user_id)
+    messages = Message.objects.filter(
+        sender__in=[request.user, recipient],
+        recipient__in=[request.user, recipient]
+    ).order_by('timestamp')
+
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            Message.objects.create(sender=request.user, recipient=recipient, content=content)
+            return redirect('chat_with_user', user_id=recipient.id)
+
+    clients = User.objects.exclude(id=request.user.id)
+    return render(request, 'Dashboard/chat.html', {
+        'clients': clients,
+        'recipient': recipient,
+        'messages': messages,
+        'is_client':is_client_user,
+        'is_admin':is_admin_user,
+    })
+
+
+@login_required
+def client_chat_view(request):
+    user = request.user
+    is_admin_user = is_admin(user)
+    is_client_user = is_client(user)
+    admin_user = User.objects.filter(is_superuser=True).first()
+    if not admin_user:
+        return render(request, 'Dashboard/chat_client.html', {'error': 'No admin available at the moment.'})
+
+    messages = Message.objects.filter(
+        Q(sender=request.user, recipient=admin_user) |
+        Q(sender=admin_user, recipient=request.user)
+    ).order_by('timestamp')
+
+    if request.method == 'POST':
+        content = request.POST.get('content')
+        if content:
+            Message.objects.create(sender=request.user, recipient=admin_user, content=content)
+            return redirect('client_chat')
+
+    return render(request, 'Dashboard/chat_client.html', {
+        'admin_user': admin_user,
+        'messages': messages,
+        'is_client':is_client_user,
+        'is_admin':is_admin_user,
+    })
+
+
+@csrf_exempt
+def toggle_autobalance(request, client_id):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        status = data.get("status")
+
+        client = Client.objects.get(id=client_id)
+        client.autobalance = status
+        client.save()
+
+        return JsonResponse({"success": True, "autobalance": client.autobalance})
+    return JsonResponse({"error": "Invalid request"}, status=400)

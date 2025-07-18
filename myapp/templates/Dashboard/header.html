@@ -20,6 +20,9 @@
       name="keywords"
       content="bootstrap 5, bootstrap, bootstrap 5 admin dashboard, bootstrap 5 dashboard, bootstrap 5 charts, bootstrap 5 calendar, bootstrap 5 datepicker, bootstrap 5 tables, bootstrap 5 datatable, vanilla js datatable, colorlibhq, colorlibhq dashboard, colorlibhq admin dashboard"
     />
+    <!-- Font Awesome (v6 CDN) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-pap1dVFYoVn2sogp9hVfuOYmtzLGaZLzI1kD7DPB7tsA3mX07PTX7U3W0yYBnEo9K2aF6x+/ODXqZmJKmpsvGA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
     <!--end::Primary Meta Tags-->
     <!--begin::Fonts-->
     <link
@@ -294,7 +297,7 @@
             />
             <!--end::Brand Image-->
             <!--begin::Brand Text-->
-            <span class="brand-text fw-light">AdminLTE 4</span>
+            <span class="brand-text fw-light"><span>Wiltshire</span> <br> <sup style='font-size:9px' class='mt-1'>Developments</sup></span>
             <!--end::Brand Text-->
           </a>
           <!--end::Brand Link-->
@@ -532,12 +535,12 @@
                 </div>
                 <!-- Hidden Dropdown Menu -->
                 <ul class="nav nav-treeview ms-3" id="showTable" style="display: none;">
+                  {% if is_admin %}
                   <li class="nav-item">
                     <a href="{% url 'propertyList' %}" class="nav-link {% if request.resolver_match.url_name == 'propertyList' %}active{% endif %}">
                       <i class="bi bi-circle me-2"></i> View Property
                     </a>
                   </li>
-                  {% if is_admin %}
                   <li class="nav-item">
                     <a href="{% url 'FormPropertyType' %}" class="nav-link {% if request.resolver_match.url_name == 'FormPropertyType' %}active{% endif %}">
                       <i class="bi bi-circle me-2"></i> View Property Type
@@ -563,7 +566,18 @@
                   {% endif %}
                 </ul>
               </li>
-              <li class="nav-header">EXAMPLES</li>
+              <li class="nav-header">
+                <i class="bi bi-wallet"></i> Wallet & Auth
+              </li>
+              <li class="nav-item">
+                <a href="{% url 'initiate_wallet_payment' %}" class="nav-link {% if request.resolver_match.url_name == 'initiate_wallet_payment' %} active{% endif %}">
+                  <i class="nav-icon bi bi-box-arrow-in-right"></i>
+                  <p>
+                    Wallet
+                    <i class="nav-arrow bi bi-chevron-right"></i>
+                  </p>
+                </a>
+              </li>
               <li class="nav-item">
                 <a href="#" class="nav-link">
                   <i class="nav-icon bi bi-box-arrow-in-right"></i>
@@ -619,12 +633,7 @@
                       </li>
                     </ul>
                   </li>
-                  <li class="nav-item">
-                    <a href="../examples/lockscreen.html" class="nav-link">
-                      <i class="nav-icon bi bi-circle"></i>
-                      <p>Lockscreen</p>
-                    </a>
-                  </li>
+                           
                 </ul>
               </li>
               <li class="nav-header">DOCUMENTATIONS</li>
@@ -640,6 +649,24 @@
                   <p>Layout</p>
                 </a>
               </li>
+              {% if is_admin %}
+                  <li class="nav-item">
+                    <a href="{% url 'chat_dashboard' %}" class="nav-link">
+                      <i class="nav-icon bi bi-chat-dots"></i>
+                      <p>Clients Chat</p>
+                    </a>
+                  </li>
+                  
+                  
+                {% endif %}   
+                {% if is_client %}
+                <li class="nav-item">
+                  <a href="{% url 'client_chat' %}" class="nav-link">
+                      <i class="nav-icon bi bi-chat-dots"></i>
+                      <p>Chat Admin</p>
+                  </a>
+              </li>    
+                {% endif %}
               {% comment %} <li class="nav-item">
                 <a href="../docs/color-mode.html" class="nav-link">
                   <i class="nav-icon bi bi-star-half"></i>

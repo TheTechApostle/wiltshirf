@@ -1,0 +1,191 @@
+{% load static %}
+{% include 'Dashboard/header.html' %}
+
+<main class="app-main">
+  <!--begin::App Content Header-->
+  <div class="app-content-header mt-3">
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f7fa, #fff3e0);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .chat-container {
+            height: 90vh;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-list {
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(8px);
+            overflow-y: auto;
+        }
+
+        .user-item {
+            cursor: pointer;
+            padding: 15px;
+            transition: background 0.3s;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .user-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .chat-box {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: linear-gradient(135deg, #f9f9ff, #ffffff);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.sent {
+            text-align: right;
+        }
+
+        .message.received {
+            text-align: left;
+        }
+
+        .message .bubble {
+            display: inline-block;
+            padding: 12px 18px;
+            border-radius: 25px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .sent .bubble {
+            background: #d1ffe0;
+            color: #000;
+            box-shadow: 0 2px 5px rgba(0, 200, 100, 0.2);
+        }
+
+        .received .bubble {
+            background: #ffffff;
+            color: #000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .chat-input {
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            background-color: #ffffffee;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+        }
+
+        .chat-input input {
+            border-radius: 25px;
+            padding: 12px 20px;
+        }
+
+        .chat-input .btn {
+            border-radius: 50%;
+            padding: 10px 14px;
+        }
+
+        .bg-green {
+            background: #e1ffc7 !important;
+        }
+
+        .scrollable {
+            overflow-y: auto;
+            max-height: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .user-list {
+                display: none;
+            }
+
+            .chat-box {
+                height: 90vh;
+            }
+        }
+    </style>
+
+    <div class="container-fluid chat-container rounded shadow">
+        <div class="row h-100">
+            <!-- User List -->
+            <div class="col-md-3 user-list p-0">
+                <h5 class="p-3 border-bottom bg-light mb-0">Clients</h5>
+                {% for client in clients %}
+                    <a href="{% url 'chat_with_user' client.id %}" class="text-decoration-none text-dark">
+                        <div class="user-item {% if recipient.id == client.id %}bg-primary text-white{% endif %}">
+                            <i class="bi bi-person-circle me-2"></i>
+                            {{ client.first_name|default:client.username }}
+                        </div>
+                    </a>
+                {% empty %}
+                    <p class="p-3">No clients available.</p>
+                {% endfor %}
+            </div>
+
+            <!-- Chat Area -->
+            <div class="col-md-9 p-0">
+                {% if recipient %}
+                    <div class="chat-box h-100">
+                        <!-- Header -->
+                        <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom bg-light">
+                            <h5 class="mb-0">Chat with {{ recipient.first_name|default:recipient.username }}</h5>
+                        </div>
+
+                        <!-- Messages -->
+                        <div class="chat-messages">
+                            {% for message in messages %}
+                                <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %}">
+                                    <div class="bubble">
+                                        {{ message.content }}
+                                        <div class="small text-muted mt-1">{{ message.timestamp|date:"M d, H:i" }}</div>
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <p class="text-center text-muted mt-4">No messages yet. Start the conversation!</p>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Input Box -->
+                        <form method="post" class="chat-input">
+                            {% csrf_token %}
+                            <div class="input-group">
+                                <input type="text" name="content" class="form-control" placeholder="Type your message..." required>
+                                <button class="btn btn-primary" type="submit">
+                                    <i class="bi bi-send-fill"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                {% else %}
+                    <div class="d-flex justify-content-center align-items-center h-100">
+                        <h4>Select a client to start chatting</h4>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+</main>
+
+{% include 'Dashboard/footer.html' %}

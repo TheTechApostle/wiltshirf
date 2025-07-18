@@ -1,0 +1,58 @@
+{% load static %}
+{% include 'Dashboard/header.html' %}
+<main class="app-main">
+  <!--begin::App Content Header-->
+  <div class="app-content-header mt-3">
+    <h4>Trashed Payments</h4>
+    <table class="table table-bordered wallet-table table-responsive-sm">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>User</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Reference</th>
+          <th>Deleted At</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in trashed_payments %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ item.user.username }}</td>
+          <td>₦{{ item.amount }}</td>
+          <td>{{ item.status }}</td>
+          <td>{{ item.reference }}</td>
+          <td>{{ item.created_at|date:"M d, Y h:i A" }}</td>
+          <td>
+            <a href="{% url 'restore_payment' item.id %}" class="btn btn-sm btn-success" onclick="return confirm('Transaction Restored Back')">Restore</a>
+            <a href="{% url 'permanent_delete_payment' item.id %}" class="btn btn-sm btn-danger"
+               onclick="return confirm('Permanently delete this payment?');">Delete</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+
+{% include 'Dashboard/footer.html' %}
+
+<style>
+    .wallet-table th {
+        background: linear-gradient(to right, #007bff, #00c6ff);
+        color: #fff;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+      }
+    
+      .wallet-table td {
+        vertical-align: middle;
+      }
+    
+      .wallet-table tbody tr:hover {
+        background: #f9f9f9;
+        transition: 0.2s ease-in-out;
+      }
+</style>

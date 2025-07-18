@@ -32,11 +32,18 @@ urlpatterns = [
     path('Dashboard/property_list/', views.propertyList, name='propertyList'),
     path('logout/', views.custom_logout_view, name='LogoutUser'),
     path('Dashboard/payment-history/', views.payment_history, name='payment_history'),
+    path('Dashboard/Transaction/delete/<int:payment_id>/', views.delete_payment, name='delete_payment'),
+    path('Dashboard/TransactionTrash/', views.trashed_payments, name='trashed_payments'),
+    path('Dashboard/TransactionPayment/restore/<int:payment_id>/', views.restore_payment, name='restore_payment'),
+    path('Dashboard/TransactionPayment/permanent-delete/<int:payment_id>/', views.permanent_delete_payment, name='permanent_delete_payment'),
     path('Dashboard/wallet/', views.initiate_wallet_payment, name='initiate_wallet_payment'),
     path('Dashboard/walletsuccess/', views.verify_wallet_payment, name='verify_wallet_payment'),
     path('Dashboard/wallet_history/', views.wallet_history, name='wallet_history'),
-
-
+    path('pay_with_wallet/', views.pay_with_wallet, name='pay_with_wallet'),
+    path('pay_with_paystack_or_wallet/<int:product_id>/', views.process_payment, name='process_payment'),
+    path('Dashboard/chat/', views.chat_dashboard, name='chat_dashboard'),
+    path('Dashboard/chat/<int:user_id>/', views.chat_with_user, name='chat_with_user'),
+    path('Dashboard/chat/client/', views.client_chat_view, name='client_chat'),
 
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),
 ]

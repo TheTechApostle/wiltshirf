@@ -25,6 +25,8 @@ admin.site.register(Transaction)
 admin.site.register(PurchasedProduct)
 admin.site.register(Wallet)
 admin.site.register(WalletTransaction)
+admin.site.register(PaymentTransactionTrash)
+admin.site.register(Message)
 
 
 @admin.register(SubscriptionPropertyPlan)
