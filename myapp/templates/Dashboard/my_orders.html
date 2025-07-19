@@ -84,34 +84,41 @@
                         id="autoBalanceToggle{{ item.id }}" 
                         data-id="{{ item.id }}" 
                         data-title="{{ item.title }}" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#autoBalanceModal{{ item.id }}"
                         {% if item.subscription_plan and item.subscription_plan.auto_balance %}checked{% endif %}
                       >
                       <label class="form-check-label" for="autoBalanceToggle{{ item.id }}">
                         Auto Balance 
                       </label>
                     </div>
-                        <!-- Alert Modal -->
-                        
-
-                          
-                          <!-- Bootstrap Modal -->
-                          <div class="modal fade" id="autoBalanceModal" tabindex="-1" aria-labelledby="autoBalanceModalLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                              <div class="modal-content rounded-4 shadow">
-                                <div class="modal-header">
-                                  <h5 class="modal-title" id="autoBalanceModalLabel">Auto Balance Activated</h5>
-                                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                  This will automatically deduct the client's monthly balance based on the set percentage. Do you want to continue?
-                                </div>
-                                <div class="modal-footer">
-                                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                                  <button type="button" class="btn btn-primary" id="confirmAutoBalance">Yes, Proceed</button>
-                                </div>
-                              </div>
-                            </div>
+                    
+                    <!-- Modal -->
+                    <div class="modal fade" id="autoBalanceModal{{ item.id }}" tabindex="-1" aria-labelledby="autoBalanceModalLabel{{ item.id }}" aria-hidden="true">
+                      <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content rounded-4 shadow">
+                          <div class="modal-header">
+                            <h5 class="modal-title" id="autoBalanceModalLabel{{ item.id }}">Auto Balance Activated</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
+                          <div class="modal-body">
+                            This will automatically deduct the client's monthly balance based on the set percentage. Do you want to continue?
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                            <button 
+                              type="button" 
+                              class="btn btn-primary confirm-auto-balance" 
+                              data-id="{{ item.id }}"
+                              data-title="{{ item.title }}"
+                            >
+                              Yes, Proceed
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
                   
                     
                     {% endif %}
@@ -180,94 +187,8 @@
                     </div>
 
                     <!-- Modal JS -->
-                    <script>
-                      document.addEventListener("DOMContentLoaded", function () {
-                        const paystackKey = "{{ PayStackKey }}";
-                        const userEmail = "{{ request.user.email }}";
-                      
-                        {% for item in orders %}
-                        (function () {
-                          const id = "{{ item.id }}";
-                          const paymentOption = document.getElementById("paymentOption" + id);
-                          const monthlyInfo = document.getElementById("monthlyPaymentInfo" + id);
-                          const percentageBox = document.getElementById("percentageSelectBox" + id);
-                          const percentageSelect = document.getElementById("percentageSelect" + id);
-                          const calculatedAmount = document.getElementById("calculatedAmount" + id);
-                          const payNowBtn = document.getElementById("payNow" + id);
-                      
-                          const toBalance = parseFloat("{{ item.to_balance|floatformat:'2' }}".replace(/,/g, '')) || 0;
-                          const monthlyPayment = parseFloat("{{ item.subscription_plan.monthly_payment|default:'0'|floatformat:'2' }}") || 0;
-                      
-                          if (!paymentOption) return;
-                      
-                          paymentOption.addEventListener("change", function () {
-                            monthlyInfo.classList.add("d-none");
-                            percentageBox.classList.add("d-none");
-                            calculatedAmount.classList.add("d-none");
-                            calculatedAmount.textContent = "";
-                      
-                            if (this.value === "monthly") {
-                              monthlyInfo.classList.remove("d-none");
-                            } else if (this.value === "percentage") {
-                              percentageBox.classList.remove("d-none");
-                              if (percentageSelect) percentageSelect.dispatchEvent(new Event("change"));
-                            }
-                          });
-                      
-                          if (percentageSelect) {
-                            percentageSelect.addEventListener("change", function () {
-                              const percent = parseFloat(this.value);
-                              const amount = (percent / 100) * toBalance;
-                              calculatedAmount.textContent = `You will pay ₦${amount.toFixed(2)} (${percent}%)`;
-                              calculatedAmount.classList.remove("d-none");
-                            });
-                          }
-                      
-                          if (payNowBtn) {
-                            payNowBtn.addEventListener("click", function () {
-                              let amountToPay = 0;
-                      
-                              if (paymentOption.value === "monthly") {
-                                amountToPay = toBalance < monthlyPayment ? toBalance : monthlyPayment;
-                              } else if (paymentOption.value === "percentage" && percentageSelect) {
-                                const percent = parseFloat(percentageSelect.value);
-                                amountToPay = (percent / 100) * toBalance;
-                              }
-                      
-                              if (amountToPay <= 0 || isNaN(amountToPay)) {
-                                alert("Invalid payment amount.");
-                                return;
-                              }
-                      
-                              PaystackPop.setup({
-                                key: paystackKey,
-                                email: userEmail,
-                                amount: Math.round(amountToPay * 100),
-                                currency: 'NGN',
-                                ref: '{{ item.payment_reference }}',
-                                callback: function (response) {
-                                  fetch(`/verify-paystack-payment/?reference=${response.reference}`)
-                                    .then(res => res.json())
-                                    .then(data => {
-                                      if(data.status) {
-                                        alert('Payment verified successfully!');
-                                        location.reload();
-                                      } else {
-                                        alert('Payment verification failed: ' + data.message);
-                                      }
-                                    })
-                                    .catch(() => alert('Verification request failed.'));
-                                },
-                                onClose: function () {
-                                  alert('Transaction was not completed.');
-                                }
-                              }).openIframe();
-                            });
-                          }
-                        })();
-                        {% endfor %}
-                      });
-                      </script>
+                  
+                    
                       
                     
                       
@@ -285,24 +206,108 @@
       <div class="alert alert-info mt-4">You have no orders yet.</div>
     {% endif %}
   </div>
-  <div class="modal fade" id="autoBalanceModal" tabindex="-1" aria-labelledby="autoBalanceModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header bg-info text-white">
-          <h5 class="modal-title" id="autoBalanceModalLabel">Auto Balance Notice</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" id="autoBalanceModalBody">
-          <!-- Filled by script -->
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Okay</button>
-        </div>
-      </div>
-    </div>
-  </div>
+ 
   {% comment %} /* */ {% endcomment %}
 </main>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const paystackKey = "{{ PayStackKey }}";
+    const userEmail = "{{ user.email|escapejs }}";
+
+    {% for item in orders %}
+    (function () {
+      const id = "{{ item.id }}";
+      const toBalance = parseFloat("{{ item.to_balance|floatformat:'2' }}".replace(/,/g, '')) || 0;
+      const monthlyPayment = parseFloat("{{ item.subscription_plan.monthly_payment|default:'0'|floatformat:'2' }}") || 0;
+      const paymentReference = "{{ item.payment_reference|escapejs }}";
+
+      const paymentOption = document.getElementById("paymentOption" + id);
+      const monthlyInfo = document.getElementById("monthlyPaymentInfo" + id);
+      const percentageBox = document.getElementById("percentageSelectBox" + id);
+      const percentageSelect = document.getElementById("percentageSelect" + id);
+      const calculatedAmount = document.getElementById("calculatedAmount" + id);
+      const payNowBtn = document.getElementById("payNow" + id);
+
+      if (!paymentOption) return;
+
+      // Handle payment option change
+      paymentOption.addEventListener("change", function () {
+        monthlyInfo.classList.add("d-none");
+        percentageBox.classList.add("d-none");
+        calculatedAmount.classList.add("d-none");
+        calculatedAmount.textContent = "";
+
+        if (this.value === "monthly") {
+          monthlyInfo.classList.remove("d-none");
+        } else if (this.value === "percentage") {
+          percentageBox.classList.remove("d-none");
+          if (percentageSelect) {
+            percentageSelect.dispatchEvent(new Event("change"));
+          }
+        }
+      });
+
+      // Handle percentage change
+      if (percentageSelect) {
+        percentageSelect.addEventListener("change", function () {
+          const percent = parseFloat(this.value);
+          const amount = (percent / 100) * toBalance;
+          calculatedAmount.textContent = `You will pay ₦${amount.toFixed(2)} (${percent}%)`;
+          calculatedAmount.classList.remove("d-none");
+        });
+      }
+
+      // Handle payment initiation
+      if (payNowBtn) {
+        payNowBtn.addEventListener("click", function () {
+          let amountToPay = 0;
+
+          if (paymentOption.value === "monthly") {
+            amountToPay = Math.min(toBalance, monthlyPayment);
+          } else if (paymentOption.value === "percentage" && percentageSelect) {
+            const percent = parseFloat(percentageSelect.value);
+            amountToPay = (percent / 100) * toBalance;
+          }
+
+          if (amountToPay <= 0 || isNaN(amountToPay)) {
+            alert("Invalid payment amount.");
+            return;
+          }
+          PaystackPop.setup({
+            key: paystackKey,
+            email: userEmail,
+            amount: Math.round(amountToPay * 100),
+            currency: 'NGN',
+            ref: paymentReference,
+            callback: function (response) {
+              console.log("Returned Paystack reference:", response.reference);
+            
+              fetch(`/verify-paystack-payment/?reference=${response.reference}`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.status) {
+                    alert('Payment verified successfully!');
+                    location.reload();
+                  } else {
+                    alert('Payment verification failed: ' + data.message);
+                  }
+                  console.log("Verification response:", data);
+                })
+                .catch((error) => {
+                  console.error('Verification request failed:', error);
+                });
+            },
+            
+            onClose: function () {
+              alert('Transaction was not completed.');
+            }
+          }).openIframe();
+        });
+      }
+    })();
+    {% endfor %}
+  });
+</script>
 
 <script>
   $(document).ready(function () {
@@ -362,7 +367,6 @@
   
     });
   </script>
-  <script>
     <script>
       document.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll('.auto-balance-toggle').forEach(function(toggle) {
@@ -402,3 +406,6 @@
 </style>
 
 {% include 'Dashboard/footer.html' %}
+<script>
+  console.log('welcome  ow')
+</script>

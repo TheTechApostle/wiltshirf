@@ -107,14 +107,14 @@
       
             <!-- Pages Dropdown -->
             <li class="nav-item">
-              <a class="nav-link" href="">
+              <a class="nav-link" href="{% url 'service'%}">
                 <i class="fas fa-copy me-1"></i> Services
               </a>
             </li>
       
             <!-- Contact -->
             <li class="nav-item">
-              <a class="nav-link text-primary" href=""><i class="fas fa-envelope me-1"></i> Contact</a>
+              <a class="nav-link text-primary" href="{% url 'contact' %}"><i class="fas fa-envelope me-1"></i> Contact</a>
             </li>
             <!-- Cart Icon (usually in your navbar/header) -->
             <li class="nav-item position-relative">
@@ -138,3 +138,9 @@
       
   </header>
   <!-- Navbar End -->
+   <style>
+    :root {
+      --primary-dark: rgb(40, 54, 24);
+      --accent-orange: rgb(188, 108, 37);
+    }
+   </style>

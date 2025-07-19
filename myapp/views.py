@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from .models import *
 import uuid
+from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.http import JsonResponse
 from django.db import transaction
@@ -38,6 +39,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .utils import is_admin, is_client
 from django.views.decorators.http import require_GET
 from django.utils import timezone
+import logging
 from decimal import Decimal, InvalidOperation
 # Create your views here.
 
@@ -77,6 +79,13 @@ def myHome(request):
 def about(request):
     return render(request, 'about.html')
 
+def service(request):
+    return render(request, 'services.html')
+
+def contact(request):
+    getAgent = Agent.objects.all()
+    context= {'getAgent':getAgent}
+    return render(request, 'contact.html', context)
 
 @login_required(login_url='LoginUser')  # Ensure the login URL name is correct
 def createSlider(request):
@@ -354,39 +363,55 @@ def verify_wallet_payment(request):
 def error(request):
     return render(request,'Dashboard/error.html')
 
-
-@csrf_exempt  # If called via AJAX POST without CSRF token; remove if you handle CSRF properly
+logger = logging.getLogger(__name__)
+@login_required(login_url="LoginUser")
+@csrf_exempt  
 def verify_paystack_payment(request):
-    
-    reference = request.GET.get('reference') or request.POST.get('reference')
+    reference = request.GET.get('reference')
+    print("🔍 Verifying reference:", reference)
     if not reference:
-        return JsonResponse({'status': False, 'message': 'Missing payment reference.'}, status=400)
+        return JsonResponse({'status': False, 'message': 'Missing reference'})
 
+    # Step 1: Call Paystack API
     headers = {
         "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
     }
+
     url = f"https://api.paystack.co/transaction/verify/{reference}"
     response = requests.get(url, headers=headers)
     res_data = response.json()
 
     if not res_data.get('status'):
-        return JsonResponse({'status': False, 'message': 'Payment verification failed with Paystack.'})
+        return JsonResponse({'status': False, 'message': 'Invalid Paystack response'})
 
-    data = res_data.get('data', {})
-    if data.get('status') != 'success':
-        return JsonResponse({'status': False, 'message': 'Payment status is not successful.'})
+    if res_data['data']['status'] != 'success':
+        return JsonResponse({'status': False, 'message': 'Payment not successful'})
 
-    # Mark the WalletTransaction as verified
+    # Step 2: Process successful payment
     try:
-        trans = WalletTransaction.objects.get(reference=reference)
+        transaction = WalletTransaction.objects.get(reference=reference)
     except WalletTransaction.DoesNotExist:
-        return JsonResponse({'status': False, 'message': 'Transaction record not found.'})
+        return JsonResponse({'status': False, 'message': 'Transaction not found'})
 
-    if not trans.verified:
-        trans.verified = True
-        trans.save()
+    if transaction.verified:
+        return JsonResponse({'status': True, 'message': 'Already verified'})
 
-    return JsonResponse({'status': True, 'message': 'Payment verified successfully.', 'reference': reference})
+    # Mark transaction as verified
+    transaction.verified = True
+    transaction.save()
+
+    # Optionally: update PurchasedProduct to reduce balance or mark as paid
+    try:
+        order = PurchasedProduct.objects.get(user=transaction.user, id__in=[
+            int(ref) for ref in reference.split("-") if ref.isdigit()
+        ])
+        order.deposit += transaction.amount
+        order.to_balance = max(order.price - order.deposit, 0)
+        order.save()
+    except PurchasedProduct.DoesNotExist:
+        pass  # Optional: handle or log
+
+    return JsonResponse({'status': True, 'message': 'Payment verified successfully'})
 
 @login_required(login_url="LoginUser")
 def payment_history(request):
@@ -1007,37 +1032,41 @@ def compute_payment_details(price, deposit_percent, duration_months):
 
 
 
-login_required(login_url="LoginUser")
+
+@login_required(login_url="LoginUser")
 def my_orders(request):
     user = request.user
     username = user.username
+
+    # Check user roles
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
-    orders = PurchasedProduct.objects.none()
 
-    # Get orders according to user role
+    # Get user orders
     if is_client_user:
         orders = PurchasedProduct.objects.filter(user=user)
-    if is_admin_user:
+    elif is_admin_user:
         orders = PurchasedProduct.objects.all()
+    else:
+        orders = PurchasedProduct.objects.none()
 
-    # Filter by selected user (admin only)
+    # Admin filter by user
     selected_user_id = request.GET.get("user")
     if selected_user_id:
         orders = orders.filter(user_id=selected_user_id)
 
-    # Filter by day/month/year
-    filter_type = request.GET.get('filter')
+    # Filter by date
+    filter_type = request.GET.get("filter")
     today = datetime.today()
-    if filter_type == 'day':
+    if filter_type == "day":
         orders = orders.filter(date_added__date=today.date())
-    elif filter_type == 'month':
+    elif filter_type == "month":
         orders = orders.filter(date_added__month=today.month)
-    elif filter_type == 'year':
+    elif filter_type == "year":
         orders = orders.filter(date_added__year=today.year)
 
-    # Search filter
-    search_query = request.GET.get('search')
+    # Search
+    search_query = request.GET.get("search")
     if search_query:
         q = search_query.lower()
         if q in ["completed", "fully paid", "paid", "done"]:
@@ -1050,11 +1079,10 @@ def my_orders(request):
                 Q(method__icontains=search_query)
             )
 
-    orders = orders.order_by('-date_added')
+    orders = orders.order_by("-date_added")
 
-    # Attach subscription plan and payment reference per order
     for order in orders:
-        # Attach subscription plan
+        # Get subscription plan
         try:
             property_obj = Property.objects.get(title=order.title)
             subscription_plan = SubscriptionPropertyPlan.objects.filter(property=property_obj).first()
@@ -1062,39 +1090,48 @@ def my_orders(request):
         except Property.DoesNotExist:
             order.subscription_plan = None
 
-        # Get or create a unique WalletTransaction for this order
-        trans = WalletTransaction.objects.filter(
+        # Calculate payment amount
+        amount = order.to_balance or 0
+
+        # Try to reuse existing unverified transaction
+        existing_txn = WalletTransaction.objects.filter(
             user=order.user,
+            amount=amount,
+            verified=False,
             reference__startswith=f"ORDER-{order.id}-"
         ).first()
-        amount = order.to_balance if order.to_balance is not None else 0
-        if not trans:
-            reference = f"ORDER-{order.id}-{uuid.uuid4().hex[:8]}"
-            amount = order.to_balance if order.to_balance is not None else 0
-            trans = WalletTransaction.objects.create(
+
+        if existing_txn:
+            order.payment_reference = existing_txn.reference
+            
+        else:
+            fresh_reference = f"ORDER-{order.id}-{uuid4().hex[:8]}"
+            WalletTransaction.objects.create(
                 user=order.user,
                 amount=amount,
-                reference=reference,
+                reference=fresh_reference,
                 verified=False,
             )
-        order.payment_reference = trans.reference
+            print(fresh_reference)
+            order.payment_reference = fresh_reference
+            
 
+    # Percent options
     percentage_options = [str(i) for i in range(30, 101, 10)]
 
-    # Non-admin users (if superuser)
-    admin_group = Group.objects.get(name='admin')
-    admin_users = admin_group.user_set.all()
+    # For admin filter dropdown
+    admin_users = Group.objects.get(name="admin").user_set.all()
     non_admin_users = get_user_model().objects.exclude(id__in=admin_users)
 
-    return render(request, 'Dashboard/my_orders.html', {
-        'orders': orders,
-        'is_client': is_client_user,
-        'is_admin': is_admin_user,
-        'user_username': username,
-        'percentage_options': percentage_options,
-        'PayStackKey': settings.PAYSTACK_PUBLIC_KEY,
-        'all_users': non_admin_users if request.user.is_superuser else None,
-        'selected_user_id': selected_user_id,
+    return render(request, "Dashboard/my_orders.html", {
+        "orders": orders,
+        "is_client": is_client_user,
+        "is_admin": is_admin_user,
+        "user_username": username,
+        "percentage_options": percentage_options,
+        "PayStackKey": settings.PAYSTACK_PUBLIC_KEY,
+        "all_users": non_admin_users if request.user.is_superuser else None,
+        "selected_user_id": selected_user_id,
     })
 
 
@@ -1158,7 +1195,7 @@ def process_payment(request, product_id):
     # Paystack payment
     elif method == "paystack":
         paystack_secret = settings.PAYSTACK_SECRET_KEY
-        callable_url = request.build_absolute_uri(reverse('verify_wallet_payment'))
+        callable_url = request.build_absolute_uri(reverse('verify_paystack_payment'))
 
         headers = {
             "Authorization": f"Bearer {paystack_secret}",

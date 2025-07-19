@@ -1,0 +1,150 @@
+{% load static %}
+{% include 'header.html' %}
+<style>
+    :root {
+      --primary-dark: rgb(40, 54, 24);
+      --accent-orange: rgb(188, 108, 37);
+    }
+  
+    .glow-button {
+      background: linear-gradient(135deg, var(--accent-orange), var(--primary-dark));
+      color: #fff;
+      border: none;
+      border-radius: 30px;
+      padding: 0.6rem 1.5rem;
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+  
+    .glow-button:hover {
+      box-shadow: 0 0 12px rgba(188, 108, 37, 0.6);
+      transform: scale(1.05);
+    }
+  
+    .text-gradient {
+      background: linear-gradient(90deg, var(--accent-orange), var(--primary-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  
+    .hero-section {
+      position: relative;
+      background-color: var(--primary-dark);
+      height: 60vh;
+      background-image: url("{% static 'img/property-4.jpg' %}");
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-align: center;
+    }
+  
+    .hero-section::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(40, 54, 24, 0.6);
+      z-index: 1;
+    }
+  
+    .hero-section .container {
+      position: relative;
+      z-index: 2;
+    }
+  
+    .cta-section {
+      background: linear-gradient(135deg, var(--primary-dark), var(--accent-orange));
+      color: #fff;
+      padding: 60px 0;
+      text-align: center;
+    }
+  
+    .icon-accent {
+      color: var(--accent-orange);
+    }
+  
+    .icon-primary {
+      color: var(--primary-dark);
+    }
+  </style>
+
+<section class="hero-section">
+  <div class="container">
+    <h1 class="display-4 fw-bold">Our Services</h1>
+    <p class="lead mt-3">Your Gateway to Premium Real Estate Services.<br> <p class="lead fs-4 mt-3">From property sales to investment insights — we’ve got you covered.</p></p>
+    <a href="#service-section" class="btn glow-button mt-4">Explore Services</a>
+  </div>
+</section>
+
+<section id="service-section" class="py-5">
+  <div class="container text-center">
+    <h2 class="text-gradient mb-4">What We Offer</h2>
+    <p class="text-muted mb-5">Tailored services to meet your real estate needs.</p>
+    <div class="row g-4">
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 h-100">
+          <i class="bi bi-house-door-fill fs-1 icon-accent mb-3"></i>
+          <h5 class="fw-bold">Property Sales</h5>
+          <p>Access a wide range of verified homes, lands, and commercial properties.</p>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 h-100">
+          <i class="bi bi-key-fill fs-1 icon-primary mb-3"></i>
+          <h5 class="fw-bold">Property Rentals</h5>
+          <p>Find rental properties that suit your lifestyle, location, and budget.</p>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 h-100">
+          <i class="bi bi-bar-chart-fill fs-1 icon-accent mb-3"></i>
+          <h5 class="fw-bold">Real Estate Investment</h5>
+          <p>We help you grow wealth through smart, secure property investments.</p>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 h-100">
+          <i class="bi bi-file-earmark-text-fill fs-1 icon-primary mb-3"></i>
+          <h5 class="fw-bold">Legal Documentation</h5>
+          <p>Complete and secure paperwork for seamless ownership and peace of mind.</p>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 h-100">
+          <i class="bi bi-building fs-1 icon-accent mb-3"></i>
+          <h5 class="fw-bold">Facility Management</h5>
+          <p>End-to-end services for maintaining and managing your property assets.</p>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-6">
+        <div class="card p-4 h-100">
+          <i class="bi bi-lightbulb fs-1 icon-primary mb-3"></i>
+          <h5 class="fw-bold">Property Advisory</h5>
+          <p>We provide expert guidance to help you make informed property decisions.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <h2 class="fw-bold mb-3">Ready to Buy, Rent or Invest?</h2>
+    <p class="lead mb-4">Let's help you make the right move.</p>
+    <a href="{% url 'contact' %}" class="btn glow-button">Contact Us Today</a>
+  </div>
+</section>
+
+{% include 'footer.html' %}

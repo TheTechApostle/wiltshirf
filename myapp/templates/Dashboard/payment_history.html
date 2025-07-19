@@ -18,8 +18,8 @@
             <select name="status" id="status" class="form-select form-select-sm">
               <option value="">All</option>
               <option value="success" {% if status_filter == 'success' %}selected{% endif %}>Success</option>
-              <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
-              <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+              {% comment %} <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option> {% endcomment %}
+              <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Failed</option>
             </select>
             <label for="status" class="small mb-0 me-2">Filter Reference:</label>
             <input type="text" name="reference" class="form-select form-input-sm">
