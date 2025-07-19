@@ -25,12 +25,22 @@ admin.site.register(Transaction)
 admin.site.register(PurchasedProduct)
 admin.site.register(Wallet)
 admin.site.register(WalletTransaction)
-admin.site.register(PaymentTransactionTrash)
 admin.site.register(Message)
-
 
 @admin.register(SubscriptionPropertyPlan)
 class SubscriptionPropertyPlanAdmin(admin.ModelAdmin):
     list_display = ('property', 'duration_months', 'initial_deposit_percent', 'initial_payment', 'monthly_payment')
     list_filter = ('duration_months',)
     search_fields = ('property__title',)
+
+@admin.register(PaymentTransactionTrash)
+class PaymentTransactionTrashAdmin(admin.ModelAdmin):
+    list_display = ('user', 'amount', 'reference', 'status', 'created_at', 'is_trashed')
+    list_filter = ('user', 'status', 'is_trashed', 'created_at')
+
+
+@admin.register(PurchasedProductTrash)
+class PurchasedProductTrashAdmin(admin.ModelAdmin):
+    list_display = ('user', 'title', 'price', 'transaction_reference', 'date_removed')
+    list_filter = ('user', 'method', 'date_removed')
+

@@ -47,8 +47,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'myapp.apps.MyappConfig',
-    "django_browser_reload"
+    "django_browser_reload",
+    "crispy_forms",
+    "crispy_bootstrap4"
 ]
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 JAZZMIN_SETTINGS = {
     "site_title": "Wiltshirf Admin",

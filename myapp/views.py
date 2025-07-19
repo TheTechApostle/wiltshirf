@@ -40,6 +40,7 @@ from .utils import is_admin, is_client
 from django.views.decorators.http import require_GET
 from django.utils import timezone
 import logging
+from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 # Create your views here.
 
@@ -100,27 +101,76 @@ def createSlider(request):
     return render(request, 'createSlider.html')
 
 
-@login_required(login_url='LoginUser')  # Ensure the login URL name is correct
-def propertyList(request):
-    # Get all distinct properties, most recent first
-    property_list = Property.objects.distinct().order_by('-date_added')
+@login_required(login_url='LoginUser')
+def clientProfile(request):
+    user = request.user
+    is_client_user = is_client(user)
+    is_admin_user = is_admin(user)
 
-    # Paginate: 10 properties per page
+    if is_admin_user:
+        # Annotate each user with the number of purchased products
+        clientAll = User.objects.annotate(property_count=Count('purchasedproduct')).all()
+        for user_obj in clientAll:
+            user_obj.is_admin_user = is_admin(user_obj)
+    
+    elif is_client_user:
+        clientAll = User.objects.annotate(property_count=Count('purchasedproduct')).filter(id=user.id)
+        for user_obj in clientAll:
+            user_obj.is_admin_user = False
+
+    context = {
+        'clients': clientAll,
+        'is_client':is_client_user,
+        'is_admin':is_admin_user
+        }
+    return render(request, 'Dashboard/ClientProfile.html', context)
+
+@login_required(login_url='LoginUser')
+def editProfile(request, user_id):
+    user_to_edit = get_object_or_404(User, id=user_id)
+
+    if request.method == 'POST':
+        form = EditProfileForm(request.POST, instance=user_to_edit)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect('clientProfile')
+    else:
+        form = EditProfileForm(instance=user_to_edit)
+
+    return render(request, 'Dashboard/EditProfile.html', {'form': form, 'user_to_edit': user_to_edit})
+ 
+
+
+@login_required(login_url='LoginUser')
+def propertyList(request):
+    property_list = Property.objects.all().order_by('-date_added')
     paginator = Paginator(property_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Total number of properties
     total_property_count = property_list.count()
-
-    # Count grouped by location
     country_property_count = (
         Property.objects.values('location')
         .annotate(total=Count('id'))
         .order_by('-total')
     )
 
-    # Optional: user’s recent transactions
+    # ✅ Create a mapping of property.id to list of clients
+    property_clients_map = defaultdict(list)
+
+    all_properties = Property.objects.all()
+    all_purchases = PurchasedProduct.objects.select_related('user').all()
+
+    # Match based on normalized title
+    for prop in all_properties:
+        matching_clients = [
+            p.user for p in all_purchases
+            if p.title.strip().lower() == prop.title.strip().lower()
+        ]
+        if matching_clients:
+            property_clients_map[prop.id] = matching_clients
+
     transactions = Transaction.objects.filter(user=request.user).order_by('-created_at')[:10]
 
     context = {
@@ -128,10 +178,12 @@ def propertyList(request):
         'total_property_count': total_property_count,
         'country_property_count': country_property_count,
         'transactions': transactions,
+        'property_clients_map': dict(property_clients_map),
     }
+
     return render(request, 'Dashboard/property_list.html', context)
 
-     
+
 @login_required(login_url='LoginUser')
 def Dashboard(request):
     Google_API_KEY = settings.GOOGLE_MAPS_API_KEY
@@ -501,25 +553,41 @@ def payment_history(request):
 @login_required
 def delete_payment(request, payment_id):
     user = request.user    
-    is_client_user = is_client(user)
     is_admin_user = is_admin(user)
+
     payment = get_object_or_404(Transaction, id=payment_id)
+
     if is_admin_user:
-    # Optional: check if user is admin or payment belongs to the user    
+        # Backup the transaction
         PaymentTransactionTrash.objects.create(
             user=payment.user,
             amount=payment.amount,
             status=payment.status,
             reference=payment.reference,
             created_at=payment.created_at,
+            is_trashed=True
         )
+
+        # Backup and delete each related product
+        purchased_products = PurchasedProduct.objects.filter(transaction=payment)
+        for product in purchased_products:
+            PurchasedProductTrash.objects.create(
+                user=product.user,
+                transaction_reference=payment.reference,
+                title=product.title,
+                method=product.method,
+                price=product.price,
+                deposit=product.deposit,
+                to_balance=product.to_balance
+            )
+        purchased_products.delete()
         payment.delete()
-        messages.success(request, "Payment Transaction Moved to Trash.")
+
+        messages.success(request, "Payment and associated products moved to trash.")
     else:
         messages.error(request, "You are not authorized to delete this payment.")
 
-    return redirect('payment_history')  
-
+    return redirect('payment_history')
 # view trashed transaction
 @login_required
 def trashed_payments(request):
@@ -527,9 +595,9 @@ def trashed_payments(request):
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
     if is_admin_user:
-        trashed = PaymentTransactionTrash.objects.all()
+        trashed = PaymentTransactionTrash.objects.all().order_by('-created_at')
     else:
-        trashed = PaymentTransactionTrash.objects.filter(user=request.user)
+        trashed = PaymentTransactionTrash.objects.filter(user=request.user).order_by('-created_at')
 
     context = {
         'is_client': is_client_user,
@@ -540,19 +608,40 @@ def trashed_payments(request):
 
 @login_required(login_url='LoginUser')
 def restore_payment(request, payment_id):
+    # Get trashed transaction
     trash = get_object_or_404(PaymentTransactionTrash, id=payment_id)
 
-    Transaction.objects.create(
+    # Get all trashed products using the transaction reference
+    trashed_products = PurchasedProductTrash.objects.filter(transaction_reference=trash.reference)
+
+    # Recreate the Transaction
+    restored_transaction = Transaction.objects.create(
         user=trash.user,
         amount=trash.amount,
         status=trash.status,
         reference=trash.reference,
-        created_at=trash.created_at
+        created_at=trash.created_at  # Note: might be overridden unless using raw SQL
     )
 
+    # Recreate each PurchasedProduct
+    for prod in trashed_products:
+        PurchasedProduct.objects.create(
+            user=prod.user,
+            transaction=restored_transaction,
+            title=prod.title,
+            method=prod.method,
+            price=prod.price,
+            deposit=prod.deposit,
+            to_balance=prod.to_balance
+        )
+
+    # Clean up trash records
     trash.delete()
-    messages.success(request, "Payment restored successfully.")
+    trashed_products.delete()
+
+    messages.success(request, "Payment and products restored successfully.")
     return redirect('trashed_payments')
+
 
 
 @login_required(login_url='LoginUser')
@@ -885,7 +974,7 @@ def add_subscription_plan(request, property_id):
 
     if property.allSubscription != 'Yes':
         messages.error(request, "This property does not support subscription plans.")
-        return redirect('add_subscription_plan')
+        return redirect('add_subscription_plan', property_id=property.id)
 
     # Try to fetch an existing plan (assuming one plan per property)
     existing_plan = SubscriptionPropertyPlan.objects.filter(property=property).first()

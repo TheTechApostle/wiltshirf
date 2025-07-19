@@ -48,5 +48,7 @@ urlpatterns = [
     path('Dashboard/chat/<int:user_id>/', views.chat_with_user, name='chat_with_user'),
     path('Dashboard/chat/client/', views.client_chat_view, name='client_chat'),
     path('Dashboard/verify-paystack-payment/', views.verify_paystack_payment, name='verify_paystack_payment'),
+    path('Dashboard/client-profile/', views.clientProfile, name='clientProfile'),
+    path('Dashboard/edit-profile/<int:user_id>/', views.editProfile, name='editProfile'),
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),
 ]

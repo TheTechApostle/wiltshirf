@@ -276,3 +276,17 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['timestamp']
+
+
+class PurchasedProductTrash(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    transaction_reference = models.CharField(max_length=100)
+    title = models.CharField(max_length=255)
+    method = models.CharField(max_length=50)
+    price = models.FloatField()
+    deposit = models.FloatField(null=True, blank=True)
+    to_balance = models.FloatField(null=True, blank=True)
+    date_removed = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} - ₦{self.price}"

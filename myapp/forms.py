@@ -117,3 +117,10 @@ class MessageForm(forms.ModelForm):
         widgets = {
             'content': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Type your message...'}),
         }
+
+
+# Simple profile update form
+class EditProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email']

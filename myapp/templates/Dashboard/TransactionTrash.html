@@ -3,7 +3,13 @@
 <main class="app-main">
   <!--begin::App Content Header-->
   <div class="app-content-header mt-3">
-    <h4>Trashed Payments</h4>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h4 class="mb-0">Trashed Payments</h4>
+      <a href="{% url 'payment_history' %}" class="btn btn-dark">
+          View Transaction
+      </a>
+  </div>
+  
     <table class="table table-bordered wallet-table table-responsive-sm">
       <thead>
         <tr>
@@ -40,7 +46,7 @@
 {% include 'Dashboard/footer.html' %}
 
 <style>
-    .wallet-table th {
+    .wallet-table th btn-dans{
         background: linear-gradient(to right, #007bff, #00c6ff);
         color: #fff;
         text-transform: uppercase;

@@ -1,0 +1,51 @@
+{% load static %}
+{% include 'Dashboard/header.html' %}
+
+<main class="app-main">
+  <div class="app-content-header">
+    <div class="container mt-5">
+      <h3 class="mb-4">Client Profile</h3>
+
+      <div class="row row-cols-1 row-cols-md-2 g-4">
+        {% for client in clients %}
+        <div class="col">
+          <div class="card shadow-sm p-3">
+            <div class="card-body position-relative">
+              <p><strong>Username:</strong> {{ client.get_full_name|default:client.username }}</p>
+              <p><strong>Email:</strong> {{ client.email }}</p>
+              <p>
+                <strong>Properties Owned:</strong>
+                    <span class="badge bg-dark px-3 py-1 rounded-pill text-white" style="font-size: 0.9rem;">
+                    {{ client.property_count }}
+                    </span>
+                {% if is_client %}
+                <a href="{% url 'my_orders' %}" class="btn btn-sm btn-btn-outline-primary float-end">View Properties</a>
+                {% endif %}
+              </p>
+              <a href="{% url 'editProfile' client.id %}" class="btn btn-orange text-white mt-3">Edit Profile</a>
+            </div>
+          </div>
+        </div>
+        {% empty %}
+        <p>No clients found.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</main>
+
+{% include 'Dashboard/footer.html' %}
+<style>
+    .btn-orange {
+        background-color: #f57c00;
+        border-color: #f57c00;
+      }
+      
+      .btn-orange:hover {
+        background-color: #e65100;
+        border-color: #e65100;
+      }
+      .btn-btn-outline-primary, bg-primary{
+        outline:1px solid rgb(40, 54, 24);
+      }
+</style>

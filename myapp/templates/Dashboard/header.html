@@ -574,43 +574,32 @@
                   <i class="nav-icon bi bi-box-arrow-in-right"></i>
                   <p>
                     Wallet
-                    <i class="nav-arrow bi bi-chevron-right"></i>
+                    
                   </p>
                 </a>
               </li>
               <li class="nav-item">
-                <a href="#" class="nav-link">
+                {% if is_admin %}
+                <a href="{% url 'clientProfile' %}" class="nav-link {% if request.resolver_match.url_name == 'clientProfile' %} active{% endif %}">
                   <i class="nav-icon bi bi-box-arrow-in-right"></i>
                   <p>
-                    Auth
-                    <i class="nav-arrow bi bi-chevron-right"></i>
+                    Client Details
+                  
                   </p>
                 </a>
+                {% else %}
+                <a href="{% url 'clientProfile' %}" class="nav-link {% if request.resolver_match.url_name == 'clientProfile' %} active{% endif %}">
+                  <i class="nav-icon bi bi-user-check"></i>
+                  <p>
+                    My Details
+                  
+                  </p>
+                </a>
+                {% endif %}
                 <ul class="nav nav-treeview">
+                  
                   <li class="nav-item">
-                    <a href="#" class="nav-link">
-                      <i class="nav-icon bi bi-box-arrow-in-right"></i>
-                      <p>
-                        Version 1
-                        <i class="nav-arrow bi bi-chevron-right"></i>
-                      </p>
-                    </a>
-                    <ul class="nav nav-treeview">
-                      <li class="nav-item">
-                        <a href="../examples/login.html" class="nav-link">
-                          <i class="nav-icon bi bi-circle"></i>
-                          <p>Login</p>
-                        </a>
-                      </li>
-                      <li class="nav-item">
-                        <a href="../examples/register.html" class="nav-link">
-                          <i class="nav-icon bi bi-circle"></i>
-                          <p>Register</p>
-                        </a>
-                      </li>
-                    </ul>
-                  </li>
-                  <li class="nav-item">
+                    
                     <a href="#" class="nav-link">
                       <i class="nav-icon bi bi-box-arrow-in-right"></i>
                       <p>
@@ -886,3 +875,14 @@
     </div>
   </div>
 </div>
+<style>
+  .btn-orange, bg-orange{
+    background-color:rgb(188, 108, 37)
+  }
+  .btn-orange:hover{
+    background-color:rgba(188, 111, 30, 0.8)
+  }
+  .btn-primary{
+    background:rgb(40, 54, 24);
+  }
+</style>
