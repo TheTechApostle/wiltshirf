@@ -29,7 +29,7 @@ admin.site.register(Message)
 
 @admin.register(SubscriptionPropertyPlan)
 class SubscriptionPropertyPlanAdmin(admin.ModelAdmin):
-    list_display = ('property', 'duration_months', 'initial_deposit_percent', 'initial_payment', 'monthly_payment')
+    list_display = ('property', 'duration_months', 'initial_deposit_percent', 'initial_payment', 'monthly_payment','increase_every_n_months','increase_percentage','total_amount_payable')
     list_filter = ('duration_months',)
     search_fields = ('property__title',)
 

@@ -2,6 +2,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from decimal import Decimal, ROUND_HALF_UP
 from .signals import *
+from django.core.exceptions import ValidationError
+from django.db.models import JSONField
 
 # Create your models here.
 class SliderImages(models.Model):
@@ -159,42 +161,116 @@ class Cart(models.Model):
 
 
 
+# class SubscriptionPropertyPlan(models.Model):
+#     property = models.ForeignKey("Property", on_delete=models.CASCADE, related_name='subscription_plans')
+#     duration_months = models.PositiveIntegerField(help_text="Enter duration in months (e.g. 4, 5, 9)")
+#     initial_deposit_percent = models.PositiveIntegerField(default=30, help_text="e.g. 30 for 30% deposit")
+    
+#     initial_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+#     monthly_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+#     auto_balance = models.BooleanField(default=False)
+#     def __str__(self):
+#         return f"{self.property.title} – {self.duration_months} Month Plan"
+    
+#     def save(self, *args, **kwargs):
+#         if self.property.allSubscription != 'Yes':
+#             raise ValueError("This property does not support subscription plans.")
+
+#         if not (1 <= self.initial_deposit_percent < 100):
+#             raise ValueError("Initial deposit percent must be between 1 and 99.")
+
+#         if self.duration_months < 1:
+#             raise ValueError("Duration must be at least 1 month.")
+
+#         total_price = Decimal(self.property.price)
+#         deposit_percent = Decimal(self.initial_deposit_percent)
+
+#         # Exact calculation without rounding
+#         self.initial_payment = total_price * (deposit_percent / Decimal(100))
+
+#         if self.duration_months > 1:
+#             remaining_amount = total_price - self.initial_payment
+#             months_remaining = self.duration_months
+#             self.monthly_payment = remaining_amount / Decimal(months_remaining)
+#         else:
+#             self.monthly_payment = Decimal("0.00")
+
+#         super().save(*args, **kwargs)
+
+def quantize_value(value):
+    return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
 class SubscriptionPropertyPlan(models.Model):
     property = models.ForeignKey("Property", on_delete=models.CASCADE, related_name='subscription_plans')
     duration_months = models.PositiveIntegerField(help_text="Enter duration in months (e.g. 4, 5, 9)")
     initial_deposit_percent = models.PositiveIntegerField(default=30, help_text="e.g. 30 for 30% deposit")
-    
+
+    increase_every_n_months = models.PositiveIntegerField(
+        blank=True, null=True,
+        help_text="Apply increase every N months (e.g. 3)"
+    )
+    increase_percentage = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        blank=True, null=True,
+        help_text="Percentage increase at each interval (e.g. 12 for 12%)"
+    )
+
     initial_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     monthly_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    total_amount_payable = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
     auto_balance = models.BooleanField(default=False)
+
+    monthly_breakdown = JSONField(blank=True, null=True)
+
     def __str__(self):
         return f"{self.property.title} – {self.duration_months} Month Plan"
-    
+
     def save(self, *args, **kwargs):
         if self.property.allSubscription != 'Yes':
-            raise ValueError("This property does not support subscription plans.")
+            raise ValidationError("This property does not support subscription plans.")
 
         if not (1 <= self.initial_deposit_percent < 100):
-            raise ValueError("Initial deposit percent must be between 1 and 99.")
+            raise ValidationError("Initial deposit percent must be between 1 and 99.")
 
         if self.duration_months < 1:
-            raise ValueError("Duration must be at least 1 month.")
+            raise ValidationError("Duration must be at least 1 month.")
 
+        # Step 1: Calculate total price and deposit
         total_price = Decimal(self.property.price)
         deposit_percent = Decimal(self.initial_deposit_percent)
 
-        # Exact calculation without rounding
-        self.initial_payment = total_price * (deposit_percent / Decimal(100))
+        self.initial_payment = quantize_value(total_price * deposit_percent / Decimal(100))
+        remaining_balance = total_price - self.initial_payment
 
-        if self.duration_months > 1:
-            remaining_amount = total_price - self.initial_payment
-            months_remaining = self.duration_months
-            self.monthly_payment = remaining_amount / Decimal(months_remaining)
-        else:
-            self.monthly_payment = Decimal("0.00")
+        # Step 2: Calculate base monthly payment
+        base_monthly_payment = quantize_value(remaining_balance / Decimal(self.duration_months))
+        current_payment = base_monthly_payment
+
+        # Step 3: Generate monthly breakdown with increasing logic
+        breakdown = {}
+        monthly_total = Decimal("0.00")
+
+        for month in range(1, self.duration_months + 1):
+            # Apply percentage increase every N months
+            if (
+                self.increase_every_n_months and
+                self.increase_percentage and
+                month > 1 and (month - 1) % self.increase_every_n_months == 0
+            ):
+                multiplier = Decimal(1) + (self.increase_percentage / Decimal(100))
+                current_payment = quantize_value(current_payment * multiplier)
+
+            # Save breakdown
+            breakdown[f"Month {month}"] = float(current_payment)
+            monthly_total += current_payment
+
+        # Step 4: Final summary
+        self.monthly_breakdown = breakdown
+        self.monthly_payment = quantize_value(monthly_total / Decimal(self.duration_months))
+        self.total_amount_payable = quantize_value(self.initial_payment + monthly_total)
 
         super().save(*args, **kwargs)
-
+        
 
 class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

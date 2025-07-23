@@ -57,12 +57,12 @@
           <!-- Logo for mobile only -->
           <!-- Mobile view logo -->
             <img src="{% static 'img/Wiltshire-01.jpg' %}" alt="Wiltshire Realty Logo"
-            class="me-2 rounded-circle d-lg-none"
+            class="me-2 d-lg-none"
             style="width: 150px; height: 100px;">
 
             <!-- Desktop view logo -->
             <img src="{% static 'img/Wiltshire-01.jpg' %}" alt="Wiltshire Realty Logo"
-            class="me-2 rounded-circle d-none d-lg-block ml-5"
+            class="me-2  d-none d-lg-block ml-5"
             style="width: 150px; height: 100px;">
 
           <!-- <span class="fs-4 fw-bold text-primary d-none d-lg-block">
@@ -101,10 +101,21 @@
                   aria-labelledby="propertiesDropdown">
                 <li><a class="dropdown-item" href="{% url 'property_lists' %}"><i class="fas fa-list me-2 text-primary"></i> Property Listings</a></li>
                 <li><a class="dropdown-item" href="{% url 'PropertyTypeHome' %}"><i class="fas fa-th-large me-2 text-primary"></i> Property Types</a></li>
-                <li><a class="dropdown-item" href="property-agent.html"><i class="fas fa-user-tie me-2 text-primary"></i> Our Agents</a></li>
+                
               </ul>
             </li>
-      
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle text-primary" href="#" id="propertiesDropdown" role="button"
+                 data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-building me-1"></i> Feeds
+              </a>
+              <ul class="dropdown-menu shadow border-0 rounded-3 animate__animated animate__fadeIn"
+                  aria-labelledby="propertiesDropdown">
+                <li><a class="dropdown-item" href=""><i class="fas fa-list me-2 text-primary"></i> News</a></li>
+                <li><a class="dropdown-item" href=""><i class="fas fa-th-large me-2 text-primary"></i> Gallery</a></li>
+                
+              </ul>
+            </li>
             <!-- Pages Dropdown -->
             <li class="nav-item">
               <a class="nav-link" href="{% url 'service'%}">
