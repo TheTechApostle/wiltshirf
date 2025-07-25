@@ -77,7 +77,7 @@
         <div class="col">
           <div class="card cart-card h-100">
             {% if item.image %}
-              <img src="{{ item.image }}" class="card-img-top" alt="{{ item.title }}">
+              <img src="{{ item.image }}" class="card-img-top" alt="{{ item.title }}" style="height:450px">
             {% endif %}
             <div class="card-body">
               <h5 class="card-title fw-semibold">{{ item.title }}</h5>
@@ -185,7 +185,7 @@
                             </thead>
                             <tbody>
                               {% for month, amount in item.monthly_breakdown.items %}
-                                <tr>
+                                <tr {% if forloop.counter|divisibleby:3 %} class="bg-primary text-white" {% endif %}>
                                   <td>{{ month }}</td>
                                   <td>₦{{ amount|floatformat:2|intcomma }}</td>
                                 </tr>
@@ -211,7 +211,7 @@
                   {% if total_deposit %}
                     <h5>Total Price: <span class="text-success">₦{{ total_price|floatformat:2 }}</span></h5>
                     <h5>Total Deposit: <span class="text-success">₦{{ total_deposit|floatformat:2 }}</span></h5>
-                    <h5>Total Amount To Balance: <span class="text-success">₦{{ total_to_balance|floatformat:2 }}</span></h5>
+                    {% comment %} <h5>Total Amount To Balance: <span class="text-success">₦{{ total_to_balance|floatformat:2 }}</span></h5> {% endcomment %}
                   {% endif %}
                 </p>
                 <!-- Terms and Conditions -->
@@ -545,6 +545,17 @@ p{font-family:calibri}
   width: 100%;
   background: white;
 }
+
+  .card-img-top {
+    height: 430px;
+  }
+
+  @media screen and (max-width: 767px) {
+    .card-img-top {
+      height: 250px;
+    }
+  }
+
 </style>
 
 {% include 'footer.html' %}

@@ -1126,6 +1126,8 @@ def verify_payment(request):
     response = requests.get(url, headers=headers)
     res_data = response.json()
 
+    contract_instance = UploadedContract.objects.filter(reference=reference).first()  # if saved in separate model
+
     if res_data.get('status') and res_data['data']['status'] == 'success':
         amount = res_data['data']['amount'] / 100  # Convert kobo to Naira
 
@@ -1134,11 +1136,12 @@ def verify_payment(request):
             user=request.user,
             reference=reference,
             amount=amount,
+            contract_file=contract_instance.contract_file if contract_instance else None,  # 🧾 attach PDF
             status='success'
         )
 
         # ✅ Retrieve contract file uploaded earlier
-        contract_instance = UploadedContract.objects.filter(reference=reference).first()  # if saved in separate model
+        
 
         # ✅ Save purchased items
         cart_items = request.session.get('cart', {})

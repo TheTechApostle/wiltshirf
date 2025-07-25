@@ -165,7 +165,7 @@
                                     <a href="#">
                                       {% with x.images.first as first_image %}
                                         {% if first_image %}
-                                          <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ first_image.label }}" style="height:230px;">
+                                          <a href="{{ first_image.image.url }}"><img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ first_image.label }}"></a>
                                         {% else %}
                                           <img src="{% static 'img/default-property.jpg' %}" class="card-img-top" alt="No image available">
                                         {% endif %}
@@ -320,7 +320,19 @@
         
         {% include 'footer.html'%}
         <!-- Footer Start -->
-     
+  
+      <style>
+        .card-img-top {
+          height: 430px;
+        }
+      
+        @media screen and (max-width: 767px) {
+          .card-img-top {
+            height: 250px;
+          }
+        }
+      </style>
+  
 </body>
 
 </html>

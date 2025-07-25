@@ -16,7 +16,7 @@
           <div class="carousel-inner">
             {% for image in images %}
             <div class="carousel-item {% if forloop.first %}active{% endif %}">
-              <img src="{{ image.image.url }}" class="d-block w-100" alt="{{ image.label }}">
+              <img src="{{ image.image.url }}" class="d-block w-100 card-img-top" alt="{{ image.label }}">
               <div class="carousel-caption">
                 <h5 class="h5-text">Explore the {{ image.label }} View</h5>
               </div>
@@ -252,4 +252,15 @@
       height: 250px;
     }
   }
+
+    .card-img-top {
+      height: 430px;
+    }
+  
+    @media screen and (max-width: 767px) {
+      .card-img-top {
+        height: 250px;
+      }
+    }
+
 </style>

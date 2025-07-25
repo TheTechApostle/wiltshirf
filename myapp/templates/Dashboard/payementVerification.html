@@ -38,7 +38,8 @@
           <li class="list-group-item">
             <strong>{{ product.title }}</strong><br>
             Full Price: ₦{{ product.price|floatformat:2 }}<br>
-            Deposit Paid: ₦{{ product.deposit|floatformat:2 }}
+            Deposit Paid: ₦{{ product.deposit|floatformat:2 }} <br>
+            <a href="{{ product.contract_file.url}}" class="badge bg-primary p-2" download>Download Contract Document</a>
           </li>
         {% endfor %}
       </ul>
