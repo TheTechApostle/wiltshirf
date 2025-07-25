@@ -43,7 +43,26 @@ import logging
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 # Create your views here.
+from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.core.mail import EmailMessage
 
+
+
+def notify_payment_success(request, amount, reference):
+    send_mail(
+        subject="Payment Successful",
+        message=(
+            f"Hi {request.user.username},\n\n"
+            f"Your payment of ₦{amount} was successful.\n"
+            f"Transaction Reference: {reference}\n\n"
+            f"Thank you for your trust!"
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[request.user.email],
+        fail_silently=False  # Set to False for debugging
+    )
 
 def myHome(request):
     getSlider = SliderImages.objects.all()
@@ -900,26 +919,65 @@ def add_to_cart(request, id):
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
+            
 
-            # Handle and sanitize input
             percentage = int(body.get('percentage', 100))
             deposit_raw = body.get('deposit', 0)
+            selected_plan_id = body.get('subscription_plan_id')
+            
+            duration_months = 0
+            plan = None
+            monthly_breakdown_dict = {}
+            increase_percent = 0
+            increase_n_months = 0
+
+            if selected_plan_id:
+                try:
+                    plan = SubscriptionPropertyPlan.objects.get(id=selected_plan_id, property=property_item)
+                except SubscriptionPropertyPlan.DoesNotExist:
+                    pass
+            else:
+                plan = property_item.subscription_plans.first()
+
+            if plan:
+                duration_months = plan.duration_months
+                monthly_breakdown_dict = plan.monthly_breakdown or {}
+                increase_percent = plan.increase_percentage or 0
+                increase_n_months = plan.increase_every_n_months or 0
 
             try:
                 deposit = Decimal(str(deposit_raw))
             except (InvalidOperation, ValueError):
                 return JsonResponse({'message': 'Invalid deposit amount.'}, status=400)
 
+            # 💡 Convert breakdown dict to list for serialization
+            breakdown_serializable = [
+                {'month': month, 'amount': str(amount)} for month, amount in monthly_breakdown_dict.items()
+            ]
+            monthly_total = sum(monthly_breakdown_dict.values())
+            
+            print("Serialized Breakdown:", breakdown_serializable)
+
+            
+
             cart[str(id)] = {
                 'title': property_item.title,
-                'price': str(property_item.price),  # Stored as string for JSON compatibility
+                'duration_months': duration_months,
+                'monthly_breakdown': monthly_breakdown_dict,  # keep as dict
+                'monthly_breakdown_schedule': breakdown_serializable,  # serialized list
+                'monthly_breakdown_total':monthly_total,
+                'increase_by_percent': str(increase_percent),
+                'increase_every_n_months': increase_n_months,
+                'price': str(property_item.price),
                 'initial_deposit_percent': str(percentage),
-                'initial_deposit_amount': str(deposit),  # Always store as string
+                'initial_deposit_amount': str(deposit),
+                'to_balance': str(property_item.price - deposit),
                 'image': property_item.images.first().image.url if property_item.images.exists() else ''
             }
 
             request.session['cart'] = cart
             request.session.modified = True
+            print(json.dumps(cart, indent=2))
 
             return JsonResponse({'message': 'Property added to your cart.'}, status=201)
 
@@ -931,25 +989,49 @@ def add_to_cart(request, id):
 
 @login_required(login_url='LoginUser')
 def view_cart(request):
+    user = request.user
+    username = user.username
+    getClient = get_object_or_404(ClientProfile, user=user)
+    getAddress = getClient.address
+    getFullname = user.get_full_name
     cart = request.session.get('cart', {})
 
     total_price = 0
     total_deposit = 0
+    total_to_balance =0
     has_explicit_deposit = False
 
     for item in cart.values():
+    # Convert and sanitize values
         price = float(item.get('price', 0))
         deposit = float(item.get('initial_deposit_amount', 0)) if item.get('initial_deposit_amount') else price
+        duration = int(item.get('duration_months', 0))
 
+        # Calculate outstanding balance
+        to_balance = price - deposit
+
+        # Update item with computed values
+        item['to_balance'] = to_balance
+        item['duration_months'] = duration  # Ensure it's int for consistent rendering
+
+        # Update totals
         total_price += price
         total_deposit += deposit
-
+        total_to_balance += to_balance  
+        if isinstance(item.get('initial_deposit_percent'), str):
+            item['initial_deposit_percent'] = int(item['initial_deposit_percent'])
         # Check if the user explicitly selected a deposit option
         if item.get('initial_deposit_amount'):
             has_explicit_deposit = True
-
+        if item.get('duration_months'):
+            item['duration_months'] = duration
+    
     context = {
+        'username':username,
+        'getAddress':getAddress,
+        'getFullname': getFullname,
         'cart': cart,
+        'total_to_balance':total_to_balance,
         'total_price': total_price,
         'total_deposit': total_deposit if has_explicit_deposit else None,
         'PAYSTACK_PUBLIC_KEY': settings.PAYSTACK_PUBLIC_KEY,
@@ -1025,12 +1107,12 @@ def payment_success(request):
 @login_required(login_url='LoginUser')
 def verify_payment(request):
     reference = request.GET.get('reference')
-    
+
     if not reference:
         messages.error(request, "No reference supplied.")
         return redirect('view_cart')
 
-    # Check if transaction already exists
+    # Avoid duplicate processing
     if Transaction.objects.filter(reference=reference).exists():
         messages.success(request, "Transaction already verified.")
         return redirect('paymentVerification', reference=reference)
@@ -1045,9 +1127,9 @@ def verify_payment(request):
     res_data = response.json()
 
     if res_data.get('status') and res_data['data']['status'] == 'success':
-        amount = res_data['data']['amount'] / 100  # Convert back to Naira
+        amount = res_data['data']['amount'] / 100  # Convert kobo to Naira
 
-        # Save transaction
+        # ✅ Create transaction
         transaction = Transaction.objects.create(
             user=request.user,
             reference=reference,
@@ -1055,32 +1137,59 @@ def verify_payment(request):
             status='success'
         )
 
-        # Save purchased products
+        # ✅ Retrieve contract file uploaded earlier
+        contract_instance = UploadedContract.objects.filter(reference=reference).first()  # if saved in separate model
+
+        # ✅ Save purchased items
         cart_items = request.session.get('cart', {})
         for item in cart_items.values():
-            price=float(item['price'])
-            deposit=float(item.get('initial_deposit_amount', item['price']))
+            price = float(item['price'])
+            deposit = float(item.get('initial_deposit_amount', price))
+            paid_percent = int(item.get('initial_deposit_percent', 100))
             to_balance = price - deposit
-            PurchasedProduct.objects.create(
-                user = request.user,
+
+            product = PurchasedProduct.objects.create(
+                user=request.user,
                 transaction=transaction,
                 title=item['title'],
                 method="Paystack",
                 price=price,
                 deposit=deposit,
-                to_balance = to_balance
+                Paidpercentage=paid_percent,
+                to_balance=to_balance,
+                contract_file=contract_instance.contract_file if contract_instance else None  # 🧾 attach PDF
             )
 
-        # Optional: Send email
-        send_mail(
-            subject="Payment Successful",
-            message=f"Hi {request.user.username}, your payment of ₦{amount} was successful.\nReference: {reference}",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[request.user.email],
-            fail_silently=True
+        #  Optionally send email
+        #  notify_payment_success(request, amount, reference)
+        
+        user =  request.user
+        contract_file = contract_instance.contract_file  # FileField
+
+        message = (
+            f"Dear {user.get_full_name() or user.username},\n\n"
+            f"Your payment of ₦{amount:,.2f} was successful.\n"
+            f"Transaction Reference: {reference}\n\n"
+            f"Attached is your property contract for Wiltshire Heights.\n"
+            f"Thank you for doing business with us.\n\n"
+            f"Wiltshire Estates Team"
         )
 
-        # Clear cart
+        email = EmailMessage(
+            subject="Your Property Contract and Payment Confirmation",
+            body=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=["wonderpaul242@gmail.com", user.email],
+        )
+
+        # ✅ Attach the contract file if it exists
+        if contract_file:
+            email.attach('Contract_Wiltshire.pdf', contract_file.read(), 'application/pdf')
+
+        email.send()
+        
+
+        # Clear session cart
         request.session['cart'] = {}
         request.session.modified = True
 
@@ -1090,7 +1199,25 @@ def verify_payment(request):
     else:
         messages.error(request, "Payment verification failed.")
         return redirect('view_cart')
-    
+
+
+@csrf_exempt
+def save_purchased_product(request):
+    if request.method == 'POST':
+        contract_file = request.FILES.get('contract_pdf')
+        reference = request.POST.get('reference')
+
+        if not contract_file or not reference:
+            return JsonResponse({'status': 'error', 'message': 'Missing file or reference'}, status=400)
+
+        UploadedContract.objects.create(
+            reference=reference,
+            contract_file=contract_file
+        )
+        return JsonResponse({'status': 'success'})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=405)
+
+
 @login_required(login_url='LoginUser')
 def paymentVerification(request, reference):
     transaction = get_object_or_404(Transaction, reference=reference)

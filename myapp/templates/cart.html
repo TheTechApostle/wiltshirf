@@ -1,4 +1,5 @@
 {% load static %}
+{% load humanize %}
 {% include 'header.html' %}
 
 <style>
@@ -103,10 +104,179 @@
       {% if total_deposit %}
         <h5>Total Deposit: <span class="text-success">₦{{ total_deposit|floatformat:2 }}</span></h5>
       {% endif %}
+      <!-- Button to trigger modal --> 
+     <!-- Button trigger -->
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#propertyContractModal">
+        Proceed
+      </button>
 
+      <div id="contractContent" style="margin-top:0; top:0%">
+      <!-- Modal -->
+        <div class="modal fade" id="propertyContractModal" tabindex="-1" aria-labelledby="propertyContractModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+              <!-- Modal Header -->
+              <div class="modal-header">
+                <h5 class="modal-title w-100 text-center" id="propertyContractModalLabel">
+                  Contract of Sales - Wiltshire Developments
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              
+              <!-- Modal Body -->
+              <div class="modal-body px-3 py-4" style="margin-top:0; top:0%">
+        
+                <!-- Logo -->
+                <div class="text-center">
+                  <img src="{% static 'img/Wiltshire-01.jpg' %}" alt="logoImg" width="200" height="100">
+                </div>
+        
+                <!-- Client Information -->
+                <div class="mb-4">
+                  <p class="h5 w-100 text-center">Contract of Sales - Wiltshire Developments</p>
+                  <p><strong>{{ getFullname|default:username }}</strong><br>{{ getAddress }}</p>
+                  <p><strong>Dear Sir/Ma,</strong></p>
+                </div>
+        
+                <!-- Cart Summary Loop -->
+                {% for id, item in cart.items %}
+                <div class="mb-4 border rounded p-3 bg-light">
+                  <p class="fw-bold mb-2">Payment Summary <span class="badge bg-primary">{{ forloop.counter }}</span></p>
+                  <div class="row g-3">
+                    <div class="col-md-6"><strong>Property:</strong> {{ item.title }}</div>
+                    <div class="col-md-6"><strong>Total Price:</strong> ₦{{ item.price }}</div>
+        
+                    {% if item.initial_deposit_amount %}
+                         
+                        <div class="col-md-6">
+                          <p><strong>Deposit Percent:</strong> {{ item.initial_deposit_percent }}%</p>
+                          <p><strong>Payment Type:</strong>
+                            {% if item.initial_deposit_percent < 100 %}
+                              Installment
+                            {% else %}
+                              Full Payment
+                            {% endif %}
+                            
+                          </p>
+                        </div>
+                        <div class="col-md-6">
+                          <p><strong>Deposit Amount:</strong> ₦{{ item.initial_deposit_amount }}</p>
+                          <p><strong>Amount To Balance:</strong> ₦{{item.to_balance|floatformat:2 }}</p>
+                        </div>
+                      {% else %}
+                        
+                    {% endif %}
+                    <div class="col-md-6"><strong>Duration Months:</strong> {{ item.duration_months|default:"N/A" }}</div>
+                    <div class="col-md-12 mt-3">
+                      {% comment %} <strong>Monthly Breakdown:</strong> {{ item.monthly_breakdown}}
+                      
+                      {% for entry in item.monthly_breakdown_schedule %}
+                      <p>{{ entry.month }}: ₦{{ entry.amount|floatformat:2|intcomma }}</p>
+                    {% endfor %}
+                     {% endcomment %}
+                      {% if item.monthly_breakdown_schedule %}
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered table-striped mt-2">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Month</th>
+                                <th>Amount (₦)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for month, amount in item.monthly_breakdown.items %}
+                                <tr>
+                                  <td>{{ month }}</td>
+                                  <td>₦{{ amount|floatformat:2|intcomma }}</td>
+                                </tr>
+                              {% endfor %}
+                              <tr class="fw-bold table-success">
+                                <td>Total</td>
+                                <td>₦{{ item.monthly_breakdown_total|floatformat:2|intcomma }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      {% else %}
+                        <p>No breakdown available.</p>
+                      {% endif %}
+                    </div>
+                    
+                    
+                    
+                  </div>
+                </div>
+                {% endfor %}
+                <p>
+                  {% if total_deposit %}
+                    <h5>Total Price: <span class="text-success">₦{{ total_price|floatformat:2 }}</span></h5>
+                    <h5>Total Deposit: <span class="text-success">₦{{ total_deposit|floatformat:2 }}</span></h5>
+                    <h5>Total Amount To Balance: <span class="text-success">₦{{ total_to_balance|floatformat:2 }}</span></h5>
+                  {% endif %}
+                </p>
+                <!-- Terms and Conditions -->
+                <hr class="my-4">
+                <div>
+                  <div class="alert alert-light mt-4">
+                     <h6 class="fw-bold">Terms and Conditions</h6>
+                    <ul class="list-group list-group-flush">
+                      <li class="list-group-item">
+                        <i class="bi bi-credit-card text-primary me-2"></i>
+                        All payments must be made through our official Paystack integration.
+                      </li>
+                      <li class="list-group-item">
+                        <i class="bi bi-shield-check text-success me-2"></i>
+                        Only verified transactions will be considered valid and documented. Failed transactions will be disregarded.
+                      </li>
+                      <li class="list-group-item">
+                        <i class="bi bi-person-check text-warning me-2"></i>
+                        Once your payment is confirmed, your plot/unit will be instantly allocated. You will also receive login credentials to access your dashboard.
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="mt-4">
+                    <small class="h6">Signature Image:</small>
+                    <img id="signature-preview" src="#" alt="Signature preview will appear here" style="max-width:100%; display:none;" />
+                    <hr>
+                    <div class="mt-0.5">
+                      <p><strong>{{ getFullname|default:username }}</strong></p><hr>
+                      <p id="DateContract" class="fw-bold text-muted"></p>
+
+                        <script>
+                          var dateX = new Date();
+                          document.getElementById('DateContract').innerText = "Contract Date: " + dateX.toLocaleDateString();
+                        </script>                     
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Signature Section -->
+                <hr class="my-4">
+                <div>
+                  <h6 class="fw-bold">Client Signature</h6>
+                  <canvas id="signature-pad" class="w-100 border rounded" height="200"></canvas>
+        
+                  <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-danger" id="clearSignature">Clear</button>
+                    <button class="btn btn-sm btn-success" id="saveSignature">Save Signature</button>
+                  </div>
+        
+                  
+                </div>
+              </div>
+        
+              <!-- Modal Footer -->
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button id="payWithPaystack" class="btn btn-custom btn-primary" disabled><i class='fa fa-briefcase'></i> Pay With Paystackss</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="d-flex gap-3 flex-wrap mt-4">
-        <button id="payWithPaystack" class="btn btn-custom btn-primary"><i class='fa fa-briefcase'></i> Pay With Paystack</button>
-        <button id="payWithWallet" class="btn btn-custom btn-outline-success"><i class='fa fa-wallet'></i>Pay With Wallet</button>
+        {% comment %} <button id="payWithPaystack" class="btn btn-custom btn-primary"><i class='fa fa-briefcase'></i> Pay With Paystack</button> {% endcomment %}
+        {% comment %} <button id="payWithWallet" class="btn btn-custom btn-outline-success"><i class='fa fa-wallet'></i>Pay With Wallet</button> {% endcomment %}
       </div>
     </div>
   {% else %}
@@ -114,22 +284,219 @@
   {% endif %}
 </div>
 
+<!-- Bootstrap and jQuery -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- jQuery Signature Logic -->
+ <script>
+$(document).ready(function () {
+  const canvas = document.getElementById("signature-pad");
+  const ctx = canvas.getContext("2d");
+  const $preview = $("#signature-preview");
+  const $payBtn = $("#payWithPaystack");
+
+  function resizeCanvas() {
+    canvas.width = $(canvas).width();
+    canvas.height = 200;
+  }
+
+  resizeCanvas();
+  $(window).on("resize", resizeCanvas);
+
+  let drawing = false;
+
+  function getPosition(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.type.startsWith("touch")) {
+      const touch = e.originalEvent.touches[0];
+      return {
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top
+      };
+    } else {
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top
+      };
+    }
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+    const pos = getPosition(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const pos = getPosition(e);
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+  }
+
+  function stopDraw() {
+    drawing = false;
+  }
+
+  // Check if canvas is blank
+  function isCanvasBlank(canvas) {
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    return canvas.toDataURL() === blank.toDataURL();
+  }
+
+  function updatePayButtonState() {
+    if (!isCanvasBlank(canvas)) {
+      $payBtn.prop("disabled", false);
+    } else {
+      $payBtn.prop("disabled", true);
+    }
+  }
+
+  // Mouse events
+  $(canvas).on("mousedown", startDraw);
+  $(canvas).on("mousemove", draw);
+  $(canvas).on("mouseup mouseleave", function () {
+    stopDraw();
+    updatePayButtonState();
+  });
+
+  // Touch events
+  $(canvas).on("touchstart", startDraw);
+  $(canvas).on("touchmove", draw);
+  $(canvas).on("touchend touchcancel", function () {
+    stopDraw();
+    updatePayButtonState();
+  });
+
+  // Clear signature
+  $("#clearSignature").on("click", function () {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    $preview.hide();
+    updatePayButtonState();
+  });
+
+  // Save signature
+  $("#saveSignature").on("click", function () {
+    if (isCanvasBlank(canvas)) {
+      alert("Please provide a signature before saving.");
+      return;
+    }
+    const dataURL = canvas.toDataURL("image/png");
+    $preview.attr("src", dataURL).show();
+    updatePayButtonState();
+    // Optionally, send dataURL to backend here
+  });
+
+  // Disable pay button on load
+  $payBtn.prop("disabled", true);
+});
+</script>
+
+<!-- Optional CSS -->
+<style>
+  #signature-pad {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    height: 200px;
+    cursor: crosshair;
+  }
+</style>
+
 <!-- Paystack Script -->
 <script src="https://js.paystack.co/v1/inline.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
-  document.getElementById('payWithPaystack').addEventListener('click', function (e) {
+  document.getElementById("payWithPaystack").addEventListener("click", function (e) {
     e.preventDefault();
 
-    var handler = PaystackPop.setup({
+    const contractElement = document.querySelector("#propertyContractModal .modal-body");
+    const filename = 'Contract_Wiltshire_{{ request.user.username }}.pdf';
+
+    const pdfOptions = {
+      margin:       0.3,
+      filename:     filename,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    function waitForImagesToLoad(container) {
+      const imgs = container.querySelectorAll("img");
+      const promises = [];
+
+      imgs.forEach(img => {
+        if (!img.complete) {
+          promises.push(new Promise(resolve => {
+            img.onload = img.onerror = resolve;
+          }));
+        }
+      });
+
+      return Promise.all(promises);
+    }
+
+    // Paystack setup
+    const handler = PaystackPop.setup({
       key: '{{ PAYSTACK_PUBLIC_KEY }}',
       email: '{{ request.user.email }}',
       amount: {{ total_deposit|default:total_price|floatformat:2 }} * 100,
       currency: "NGN",
       ref: 'TX' + Math.floor((Math.random() * 1000000000) + 1),
+
       callback: function (response) {
-        window.location.href = "{% url 'verify_payment' %}?reference=" + response.reference;
+        const modal = new bootstrap.Modal(document.getElementById('propertyContractModal'));
+        modal.show();
+
+        setTimeout(() => {
+          waitForImagesToLoad(contractElement).then(() => {
+            html2pdf().from(contractElement).set(pdfOptions).outputPdf('blob').then(function (pdfBlob) {
+              // 1. Download locally
+              const downloadLink = document.createElement('a');
+              downloadLink.href = URL.createObjectURL(pdfBlob);
+              downloadLink.download = filename;
+              document.body.appendChild(downloadLink);
+              downloadLink.click();
+              document.body.removeChild(downloadLink);
+
+              // 2. Upload to Django
+              const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
+              const formData = new FormData();
+              formData.append('contract_pdf', pdfFile);
+              formData.append('reference', response.reference);
+
+              fetch("{% url 'save_purchased_product' %}", {
+                method: "POST",
+                headers: {
+                  'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+              })
+              .then(res => res.json())
+              .then(data => {
+                if (data.status === "success") {
+                  window.location.href = "{% url 'verify_payment' %}?reference=" + response.reference;
+                } else {
+                  alert("PDF upload failed. Please contact support.");
+                }
+              })
+              .catch(error => {
+                console.error("Upload error:", error);
+                alert("Something went wrong while saving your contract.");
+              });
+            });
+          });
+        }, 1000);
       },
+
       onClose: function () {
         alert('Transaction was not completed.');
       }
@@ -137,8 +504,10 @@
 
     handler.openIframe();
   });
-
 </script>
+
+
+
 <script>
   document.getElementById('payWithWallet').addEventListener('click', function (e) {
     e.preventDefault();
@@ -165,5 +534,17 @@
   });
   
 </script>
+<style>
+p{font-family:calibri}
+#contractContent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100%;
+  background: white;
+}
+</style>
 
 {% include 'footer.html' %}

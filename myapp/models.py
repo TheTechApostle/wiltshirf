@@ -197,36 +197,61 @@ class Cart(models.Model):
 
 #         super().save(*args, **kwargs)
 
+# Utility function to round values to 2 decimal places
 def quantize_value(value):
     return value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
 class SubscriptionPropertyPlan(models.Model):
-    property = models.ForeignKey("Property", on_delete=models.CASCADE, related_name='subscription_plans')
-    duration_months = models.PositiveIntegerField(help_text="Enter duration in months (e.g. 4, 5, 9)")
-    initial_deposit_percent = models.PositiveIntegerField(default=30, help_text="e.g. 30 for 30% deposit")
-
+    property = models.ForeignKey(
+        "Property",
+        on_delete=models.CASCADE,
+        related_name='subscription_plans'
+    )
+    duration_months = models.PositiveIntegerField(
+        help_text="Enter duration in months (e.g. 4, 5, 9)"
+    )
+    initial_deposit_percent = models.PositiveIntegerField(
+        default=30,
+        help_text="e.g. 30 for 30% deposit"
+    )
     increase_every_n_months = models.PositiveIntegerField(
-        blank=True, null=True,
+        blank=True,
+        null=True,
         help_text="Apply increase every N months (e.g. 3)"
     )
     increase_percentage = models.DecimalField(
-        max_digits=5, decimal_places=2,
-        blank=True, null=True,
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
         help_text="Percentage increase at each interval (e.g. 12 for 12%)"
     )
-
-    initial_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    monthly_payment = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
-    total_amount_payable = models.DecimalField(max_digits=12, decimal_places=2, blank=True, null=True)
+    initial_payment = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+    monthly_payment = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
+    total_amount_payable = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        blank=True,
+        null=True
+    )
     auto_balance = models.BooleanField(default=False)
-
     monthly_breakdown = JSONField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.property.title} – {self.duration_months} Month Plan"
 
     def save(self, *args, **kwargs):
-        if self.property.allSubscription != 'Yes':
+        if not hasattr(self.property, 'allSubscription') or self.property.allSubscription != 'Yes':
             raise ValidationError("This property does not support subscription plans.")
 
         if not (1 <= self.initial_deposit_percent < 100):
@@ -251,16 +276,17 @@ class SubscriptionPropertyPlan(models.Model):
         monthly_total = Decimal("0.00")
 
         for month in range(1, self.duration_months + 1):
-            # Apply percentage increase every N months
             if (
                 self.increase_every_n_months and
                 self.increase_percentage and
-                month > 1 and (month - 1) % self.increase_every_n_months == 0
+                month > 1 and
+                (month - 1) % self.increase_every_n_months == 0
             ):
-                multiplier = Decimal(1) + (self.increase_percentage / Decimal(100))
-                current_payment = quantize_value(current_payment * multiplier)
+                # Apply percentage increase
+                increase_factor = Decimal(1) + (self.increase_percentage / Decimal(100))
+                current_payment = quantize_value(current_payment * increase_factor)
 
-            # Save breakdown
+            # Save monthly breakdown
             breakdown[f"Month {month}"] = float(current_payment)
             monthly_total += current_payment
 
@@ -270,7 +296,11 @@ class SubscriptionPropertyPlan(models.Model):
         self.total_amount_payable = quantize_value(self.initial_payment + monthly_total)
 
         super().save(*args, **kwargs)
-        
+
+    def clean(self):
+        if getattr(self.property, 'allSubscription', 'No') !='Yes':
+            raise ValidationError('This property does not support installmentall Fee')
+
 
 class Transaction(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -293,11 +323,18 @@ class PurchasedProduct(models.Model):
     method= models.CharField(choices=paymentMethod, max_length=50)
     price = models.FloatField()
     deposit = models.FloatField(null=True, blank=True)
+    Paidpercentage = models.FloatField(null=True, blank=True)
     to_balance = models.FloatField(null=True, blank=True)
+    contract_file = models.FileField(upload_to='contracts/', null=True, blank=True)
     date_added = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.title
+
+class UploadedContract(models.Model):
+    reference = models.CharField(max_length=100, unique=True)
+    contract_file = models.FileField(upload_to='contracts/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
 
 
 class ClientProfile(models.Model):

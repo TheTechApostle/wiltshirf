@@ -50,5 +50,6 @@ urlpatterns = [
     path('Dashboard/verify-paystack-payment/', views.verify_paystack_payment, name='verify_paystack_payment'),
     path('Dashboard/client-profile/', views.clientProfile, name='clientProfile'),
     path('Dashboard/edit-profile/<int:user_id>/', views.editProfile, name='editProfile'),
+    path('Dashboard/trasaction/save_purchased_product', views.save_purchased_product, name='save_purchased_product'),
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),
 ]

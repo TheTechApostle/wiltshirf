@@ -4,6 +4,7 @@ from .models import *
 
 admin.site.register(SliderImages)
 admin.site.register(ClientRequest)
+admin.site.register(ClientProfile)
 class PropertyImageInline(admin.TabularInline):  # or admin.StackedInline
     model = PropertyImage
     extra = 1
@@ -26,6 +27,7 @@ admin.site.register(PurchasedProduct)
 admin.site.register(Wallet)
 admin.site.register(WalletTransaction)
 admin.site.register(Message)
+admin.site.register(UploadedContract)
 
 @admin.register(SubscriptionPropertyPlan)
 class SubscriptionPropertyPlanAdmin(admin.ModelAdmin):

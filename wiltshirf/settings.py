@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'myapp.apps.MyappConfig',
     "django_browser_reload",
     "crispy_forms",
-    "crispy_bootstrap4"
+    "crispy_bootstrap4",
+    'django.contrib.humanize',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
@@ -66,6 +67,16 @@ JAZZMIN_SETTINGS = {
     "user_avatar": None,
     "theme": "cosmo"
 }
+
+# settings.py
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # or your SMTP provider
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'wonderpaul243@gmail.com'
+EMAIL_HOST_PASSWORD = 'cxuzngiwllihmayb'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 MIDDLEWARE = [
