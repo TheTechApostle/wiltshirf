@@ -137,7 +137,7 @@
                               {% csrf_token %}
                               <p><strong>Balance:</strong> ₦{{ item.to_balance|floatformat:2 }}</p>
                               {% if plan %}
-                                <p><strong>Plan:</strong> {{ plan.duration_months }} months — Initial Deposit: {{ plan.initial_deposit_percent }}%</p>
+                                <p><strong>Plan:</strong> {{ plan.duration_months }} months — Initial Deposit: {{ item.Paidpercentage }}%</p>
                               {% endif %}
 
                               <div class="mb-3">
@@ -176,9 +176,9 @@
                                 <button type="submit" name="method" value="wallet" class="btn btn-success">
                                   <i class="bi bi-wallet2 me-1"></i> Pay with Wallet
                                 </button>
-                                <button type="submit" name="method" value="paystack" class="btn btn-primary">
+                                {% comment %} <button type="submit" name="method" value="paystack" class="btn btn-primary">
                                   <i class="bi bi-credit-card me-1"></i> Pay with Paystack
-                                </button>
+                                </button> {% endcomment %}
                               </div>
                             </form>
                           </div>

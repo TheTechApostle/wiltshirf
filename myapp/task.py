@@ -26,3 +26,6 @@ def update_balances():
 
             product.to_balance = float(round(new_balance, 2))
             product.save()
+            updated_count += 1
+
+    return f"{updated_count} products updated"

@@ -54,9 +54,16 @@ INSTALLED_APPS = [
 ]
 
 
-INSTALLED_APPS += ['django_celery_beat']
+INSTALLED_APPS += ['django_celery_beat','django_celery_results']
 
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+CELERY_BROKER_URL = 'django://'  # use Django DB as broker
+CELERY_RESULT_BACKEND = 'django-db'
+
+# Optional
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
@@ -78,11 +85,14 @@ JAZZMIN_SETTINGS = {
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'  # or your SMTP provider
-EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'wonderpaul243@gmail.com'
 EMAIL_HOST_PASSWORD = 'cxuzngiwllihmayb'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_PORT = 465
+EMAIL_USE_SSL = True
+EMAIL_USE_TLS = False
+
 
 
 MIDDLEWARE = [

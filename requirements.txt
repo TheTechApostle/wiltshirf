@@ -1,0 +1,13 @@
+django
+django-browser-reload
+jazzmin
+python-dotenv
+crispy_forms
+crispy-bootstrap4
+celery
+django-celery-beat
+django-celery-results
+report_lab
+# weasyprint
+python-docx
+
