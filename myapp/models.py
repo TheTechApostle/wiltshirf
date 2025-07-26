@@ -4,7 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from .signals import *
 from django.core.exceptions import ValidationError
 from django.db.models import JSONField
-
+from django.utils import timezone
 # Create your models here.
 class SliderImages(models.Model):
     sliderText = models.TextField("Slider Text", max_length=200)
@@ -319,6 +319,7 @@ class PurchasedProduct(models.Model):
     ]
     user = models.ForeignKey(User, on_delete=models.CASCADE) 
     transaction = models.ForeignKey('Transaction', on_delete=models.CASCADE, related_name='products')
+    property = models.ForeignKey('Property', on_delete=models.SET_NULL, null=True, blank=True, related_name='purchases')
     title = models.CharField(max_length=255)
     method= models.CharField(choices=paymentMethod, max_length=50)
     price = models.FloatField()
@@ -326,7 +327,8 @@ class PurchasedProduct(models.Model):
     Paidpercentage = models.FloatField(null=True, blank=True)
     to_balance = models.FloatField(null=True, blank=True)
     contract_file = models.FileField(upload_to='contracts/', null=True, blank=True)
-    date_added = models.DateTimeField(auto_now_add=True)
+    date_added = models.DateTimeField(default=timezone.now, editable=True)
+
 
     def __str__(self):
         return self.title

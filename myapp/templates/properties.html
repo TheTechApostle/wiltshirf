@@ -53,7 +53,7 @@
             <div class="swiper-wrapper">
               {% for img in property.images.all %}
                 <div class="swiper-slide">
-                  <img src="{{ img.image.url }}" class="property-img img-fluid" alt="Image of {{ property.title }}">
+                  <img src="{{ img.image.url }}" class="property-img img-fluid card-img-top" alt="Image of {{ property.title }}">
                 </div>
               {% empty %}
                 <div class="swiper-slide">
@@ -150,7 +150,15 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
   }
+  .card-img-top {
+    height: 430px;
+  }
 
+  @media screen and (max-width: 767px) {
+    .card-img-top {
+      height: 250px;
+    }
+  }
   .property-card {
     border: none;
     border-radius: 1rem;

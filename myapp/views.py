@@ -47,7 +47,7 @@ from django.core.mail import send_mail
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
-
+from dateutil.relativedelta import relativedelta
 
 
 def notify_payment_success(request, amount, reference):
@@ -919,28 +919,29 @@ def add_to_cart(request, id):
     if request.method == 'POST':
         try:
             body = json.loads(request.body)
-            
 
             percentage = int(body.get('percentage', 100))
             deposit_raw = body.get('deposit', 0)
             selected_plan_id = body.get('subscription_plan_id')
-            
+
             duration_months = 0
             plan = None
             monthly_breakdown_dict = {}
             increase_percent = 0
             increase_n_months = 0
+            monthly_payment = 0
 
             if selected_plan_id:
                 try:
                     plan = SubscriptionPropertyPlan.objects.get(id=selected_plan_id, property=property_item)
                 except SubscriptionPropertyPlan.DoesNotExist:
-                    pass
+                    plan = None
             else:
                 plan = property_item.subscription_plans.first()
 
             if plan:
-                duration_months = plan.duration_months
+                duration_months = plan.duration_months or 0
+                monthly_payment = plan.monthly_payment or 0
                 monthly_breakdown_dict = plan.monthly_breakdown or {}
                 increase_percent = plan.increase_percentage or 0
                 increase_n_months = plan.increase_every_n_months or 0
@@ -950,22 +951,25 @@ def add_to_cart(request, id):
             except (InvalidOperation, ValueError):
                 return JsonResponse({'message': 'Invalid deposit amount.'}, status=400)
 
-            # 💡 Convert breakdown dict to list for serialization
+            # Convert breakdown dict to list for serialization
             breakdown_serializable = [
                 {'month': month, 'amount': str(amount)} for month, amount in monthly_breakdown_dict.items()
             ]
-            monthly_total = sum(monthly_breakdown_dict.values())
-            
-            print("Serialized Breakdown:", breakdown_serializable)
 
-            
+            monthly_total = sum(Decimal(str(value)) for value in monthly_breakdown_dict.values())
+
+            # Debug print
+            print("Selected Plan:", plan)
+            print("Monthly Payment:", monthly_payment)
+            print("Serialized Breakdown:", breakdown_serializable)
 
             cart[str(id)] = {
                 'title': property_item.title,
                 'duration_months': duration_months,
-                'monthly_breakdown': monthly_breakdown_dict,  # keep as dict
-                'monthly_breakdown_schedule': breakdown_serializable,  # serialized list
-                'monthly_breakdown_total':monthly_total,
+                'monthly_payment': str(monthly_payment),  # Convert to string for session safety
+                'monthly_breakdown': monthly_breakdown_dict,  # raw dict (ok if simple)
+                'monthly_breakdown_schedule': breakdown_serializable,
+                'monthly_breakdown_total': str(monthly_total),
                 'increase_by_percent': str(increase_percent),
                 'increase_every_n_months': increase_n_months,
                 'price': str(property_item.price),
@@ -977,14 +981,16 @@ def add_to_cart(request, id):
 
             request.session['cart'] = cart
             request.session.modified = True
-            print(json.dumps(cart, indent=2))
+            print("Cart updated:", json.dumps(cart, indent=2))
 
             return JsonResponse({'message': 'Property added to your cart.'}, status=201)
 
         except Exception as e:
+            print("Cart Error:", str(e))
             return JsonResponse({'message': 'Error processing cart item.', 'error': str(e)}, status=400)
 
     return JsonResponse({'message': 'Invalid request method.'}, status=405)
+
 
 
 @login_required(login_url='LoginUser')
@@ -1000,12 +1006,14 @@ def view_cart(request):
     total_deposit = 0
     total_to_balance =0
     has_explicit_deposit = False
+    monthly_payment = 0
 
     for item in cart.values():
     # Convert and sanitize values
         price = float(item.get('price', 0))
         deposit = float(item.get('initial_deposit_amount', 0)) if item.get('initial_deposit_amount') else price
         duration = int(item.get('duration_months', 0))
+        monthly_payment = Decimal(item.get('monthly_payment', 0))
 
         # Calculate outstanding balance
         to_balance = price - deposit
@@ -1026,6 +1034,7 @@ def view_cart(request):
         if item.get('duration_months'):
             item['duration_months'] = duration
     
+    print(monthly_payment)
     context = {
         'username':username,
         'getAddress':getAddress,
@@ -1039,6 +1048,45 @@ def view_cart(request):
 
     return render(request, 'cart.html', context)
 
+
+def update_balances_view(request):
+     # adjust redirect as needed
+
+    today = now()
+    updated_count = 0
+
+    products = PurchasedProduct.objects.select_related('property', 'user')
+    for product in products:
+        prop = product.property
+        if not prop:
+            continue
+
+        # Get the subscription plan
+        plan = prop.subscription_plans.last()
+        if not plan or not plan.increase_every_n_months or not plan.increase_percentage:
+            continue
+
+        # Calculate how many months have passed
+        months_since_purchase = (today.year - product.date_added.year) * 12 + (today.month - product.date_added.month)
+        increments_due = months_since_purchase // plan.increase_every_n_months
+        if increments_due <= 0:
+            continue
+
+        base_balance = product.price - (product.deposit or 0)
+        new_balance = Decimal(str(base_balance))
+
+        for _ in range(increments_due):
+            new_balance += (plan.increase_percentage / 100) * new_balance
+
+        new_balance = round(new_balance, 2)
+
+        if product.to_balance != new_balance:
+            product.to_balance = new_balance
+            product.save()
+            updated_count += 1
+
+    messages.success(request, f"{updated_count} purchased products were updated.")
+    return redirect('Dashboard')  # change this to your admin or summary view
 
 
 @login_required(login_url='LoginUser')
@@ -1150,11 +1198,12 @@ def verify_payment(request):
             deposit = float(item.get('initial_deposit_amount', price))
             paid_percent = int(item.get('initial_deposit_percent', 100))
             to_balance = price - deposit
-
+            property_instance = Property.objects.get(title=item['title'])
             product = PurchasedProduct.objects.create(
                 user=request.user,
                 transaction=transaction,
-                title=item['title'],
+                property = property_instance,
+                title= property_instance.title,
                 method="Paystack",
                 price=price,
                 deposit=deposit,

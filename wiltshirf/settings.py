@@ -53,6 +53,12 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
 ]
 
+
+INSTALLED_APPS += ['django_celery_beat']
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 

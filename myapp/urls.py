@@ -51,5 +51,6 @@ urlpatterns = [
     path('Dashboard/client-profile/', views.clientProfile, name='clientProfile'),
     path('Dashboard/edit-profile/<int:user_id>/', views.editProfile, name='editProfile'),
     path('Dashboard/trasaction/save_purchased_product', views.save_purchased_product, name='save_purchased_product'),
+    path('Dashboard/update-balances/', views.update_balances_view, name='update_balances'),
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),
 ]

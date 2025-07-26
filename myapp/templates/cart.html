@@ -161,7 +161,8 @@
                         </div>
                         <div class="col-md-6">
                           <p><strong>Deposit Amount:</strong> ₦{{ item.initial_deposit_amount }}</p>
-                          <p><strong>Amount To Balance:</strong> ₦{{item.to_balance|floatformat:2 }}</p>
+                          <p><strong>Amount To Balance before Installment Increase:</strong> ₦{{item.to_balance|floatformat:2 }}</p>
+                          <p><strong>Monthly:</strong> ₦{{item.monthly_payment|floatformat:2 }}</p>
                         </div>
                       {% else %}
                         
@@ -269,6 +270,7 @@
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 <button id="payWithPaystack" class="btn btn-custom btn-primary" disabled><i class='fa fa-briefcase'></i> Pay With Paystackss</button>
+                <button id="payWithWallet" class="btn btn-custom btn-outline-success" disabled><i class='fa fa-wallet'></i>Pay With Wallet</button>
               </div>
             </div>
           </div>
@@ -295,6 +297,7 @@ $(document).ready(function () {
   const ctx = canvas.getContext("2d");
   const $preview = $("#signature-preview");
   const $payBtn = $("#payWithPaystack");
+  const $payBtns = $("#payWithWallet");
 
   function resizeCanvas() {
     canvas.width = $(canvas).width();
@@ -355,8 +358,10 @@ $(document).ready(function () {
   function updatePayButtonState() {
     if (!isCanvasBlank(canvas)) {
       $payBtn.prop("disabled", false);
+      $payBtns.prop("disabled", false);
     } else {
       $payBtn.prop("disabled", true);
+      $payBtns.prop("disabled", true);
     }
   }
 

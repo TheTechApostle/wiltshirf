@@ -3,7 +3,17 @@
 {% load customs_tags %}
 <!-- Swiper CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<style>
+  .card-img-top {
+    height: 430px;
+  }
 
+  @media screen and (max-width: 767px) {
+    .card-img-top {
+      height: 250px;
+    }
+  }
+</style>
 <div class="container-xxl py-5">
     <div class="container">
         <div class="text-center mx-auto mb-5 w-100 wow fadeInUp" data-wow-delay="0.1s">
@@ -35,7 +45,7 @@
                             <a href="#">
                               {% with x.images.first as first_image %}
                                 {% if first_image %}
-                                  <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ first_image.label }}" style="height:230px;">
+                                  <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ first_image.label }}">
                                 {% else %}
                                   <img src="{% static 'img/default-property.jpg' %}" class="card-img-top" alt="No image available">
                                 {% endif %}

@@ -23,7 +23,28 @@ admin.site.register(Cart)
 # admin.site.register(SubscriptionPlan)
 # admin.site.register(PropertySubscription)
 admin.site.register(Transaction)
-admin.site.register(PurchasedProduct)
+@admin.register(PurchasedProduct)
+class PurchasedProductAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'property',
+        'get_property_title',
+        'method',
+        'price',
+        'deposit',
+        'formatted_balance',
+        'date_added',
+    )
+
+
+    def get_property_title(self, obj):
+        return obj.property.title if obj.property else obj.title
+    get_property_title.short_description = 'Property Title'
+
+    def formatted_balance(self, obj):
+        return f"₦{obj.to_balance:,.2f}" if obj.to_balance else "₦0.00"
+    formatted_balance.short_description = 'Remaining Balance'
+
 admin.site.register(Wallet)
 admin.site.register(WalletTransaction)
 admin.site.register(Message)
@@ -45,4 +66,5 @@ class PaymentTransactionTrashAdmin(admin.ModelAdmin):
 class PurchasedProductTrashAdmin(admin.ModelAdmin):
     list_display = ('user', 'title', 'price', 'transaction_reference', 'date_removed')
     list_filter = ('user', 'method', 'date_removed')
+
 
