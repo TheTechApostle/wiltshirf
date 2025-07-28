@@ -1786,3 +1786,19 @@ def client_chat_view(request):
 
 #         return JsonResponse({"success": True, "autobalance": client.autobalance})
 #     return JsonResponse({"error": "Invalid request"}, status=400)
+
+
+def gallery_view(request):
+    events = Event.objects.all()
+    selected_event_id = request.GET.get('event')
+    
+    if selected_event_id:
+        images = GalleryImage.objects.filter(event_id=selected_event_id)
+    else:
+        images = GalleryImage.objects.all()
+
+    return render(request, 'gallery.html', {
+        'events': events,
+        'images': images,
+        'selected_event_id': selected_event_id,
+    })

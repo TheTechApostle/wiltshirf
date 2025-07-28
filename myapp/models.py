@@ -405,3 +405,20 @@ class PurchasedProductTrash(models.Model):
 
     def __str__(self):
         return f"{self.title} - ₦{self.price}"
+
+
+
+class Event(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
+
+class GalleryImage(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='images')
+    title = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='gallery/')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title

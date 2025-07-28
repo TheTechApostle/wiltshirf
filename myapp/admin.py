@@ -68,3 +68,12 @@ class PurchasedProductTrashAdmin(admin.ModelAdmin):
     list_filter = ('user', 'method', 'date_removed')
 
 
+@admin.register(Event)
+class Event(admin.ModelAdmin):
+    list_display = ('name')
+    list_filter = ('name')
+
+@admin.register(GalleryImage)
+class Event(admin.ModelAdmin):
+    list_display = ('event', 'title', 'image', 'uploaded_at')
+    list_filter = ('event','title')
