@@ -124,6 +124,7 @@
     sendBtn.onclick = () => {
         const msg = chatInput.value.trim();
         if (!msg) return;
+
         const userMsg = document.createElement("div");
         userMsg.className = "user-message mb-2";
         userMsg.textContent = msg;
@@ -133,12 +134,31 @@
         setTimeout(() => {
             const botMsg = document.createElement("div");
             botMsg.className = "bot-message mb-3";
-            botMsg.textContent = "🤖 I'm processing your request...";
+            botMsg.innerHTML = `
+                🤖 I'm directing you to our sales rep. <br>
+                Would you like to continue?<br>
+                <button class="btn btn-sm btn-success mt-2 me-2" id="yesBtn">Yes</button>
+                <button class="btn btn-sm btn-danger mt-2" id="noBtn">No</button>
+            `;
             chatMessages.appendChild(botMsg);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Add event listeners after buttons are created
+            document.getElementById("yesBtn").onclick = () => {
+                window.open("https://wa.me/2349038226500?text=Hello%2C%20I'm%20interested%20in%20your%20property%20services.%20Can%20we%20talk%3F", "_blank");
+            };
+
+            document.getElementById("noBtn").onclick = () => {
+                const botResponse = document.createElement("div");
+                botResponse.className = "bot-message mb-3";
+                botResponse.textContent = "No problem 😊 Let me know if you need anything else!";
+                chatMessages.appendChild(botResponse);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
         }, 1000);
     };
 </script>
+
 
 <!-- Custom CSS -->
 <style>

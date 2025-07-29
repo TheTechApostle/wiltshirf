@@ -80,15 +80,56 @@ class LoginForm(AuthenticationForm):
 
 
 
+# class SubscriptionPropertyPlanForm(forms.ModelForm):
+#     class Meta:
+#         model = SubscriptionPropertyPlan
+#         fields = ['property','duration_months', 'initial_deposit_percent','increase_every_n_months','increase_percentage']
+#         widgets = {
+#             'duration_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+#             'initial_deposit_percent': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 99}),
+#         }
+
 class SubscriptionPropertyPlanForm(forms.ModelForm):
     class Meta:
         model = SubscriptionPropertyPlan
-        fields = ['duration_months', 'initial_deposit_percent']
+        fields = [
+            'property',
+            'duration_months',
+            'initial_deposit_percent',
+            'increase_every_n_months',
+            'increase_percentage'
+        ]
         widgets = {
-            'duration_months': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
-            'initial_deposit_percent': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 99}),
+            'property': forms.Select(attrs={'class': 'form-control'}),
+            'duration_months': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'placeholder': 'e.g. 12'
+            }),
+            'initial_deposit_percent': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 99,
+                'placeholder': 'e.g. 20'
+            }),
+            'increase_every_n_months': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'placeholder': 'e.g. 6'
+            }),
+            'increase_percentage': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1,
+                'max': 100,
+                'placeholder': 'e.g. 5'
+            }),
         }
 
+    def clean_initial_deposit_percent(self):
+        value = self.cleaned_data.get('initial_deposit_percent')
+        if value >= 100:
+            raise forms.ValidationError("Initial deposit percent must be less than 100%.")
+        return value
 
 class ClientRegistrationForm(forms.ModelForm):
     first_name = forms.CharField(max_length=30, required=True, label="First Name", widget=forms.TextInput(attrs={'class': 'form-control'}))

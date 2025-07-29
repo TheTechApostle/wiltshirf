@@ -1,9 +1,6 @@
 {% load static %}
 {% include 'header.html' %}
-<<<<<<< HEAD
 {% load customs_tags %}
-=======
->>>>>>> 4125a83c59aff0074b94a6234156183b6d743ce2
 
 <!-- Gallery Start -->
 <section class="container-xxl py-5">
@@ -35,13 +32,8 @@
       {% for image in images %}
       <div class="col-lg-4 col-md-6 wow fadeInUp" data-wow-delay="0.1s">
         <div class="about-img position-relative overflow-hidden rounded shadow">
-<<<<<<< HEAD
           <img src="{{ image.image.url }}" alt="{{ image.title }}" class="img-fluid w-100" style="height: 450px; object-fit: cover;">
           <div class="p-3 bg-light text-white">
-=======
-          <img src="{{ image.image.url }}" alt="{{ image.title }}" class="img-fluid w-100" style="height: 250px; object-fit: cover;">
-          <div class="p-3 bg-light">
->>>>>>> 4125a83c59aff0074b94a6234156183b6d743ce2
             <h5 class="mb-1">{{ image.title }}</h5>
             <small class="text-muted">{{ image.event.name }}</small>
           </div>
@@ -57,8 +49,4 @@
 </section>
 <!-- Gallery End -->
 
-<<<<<<< HEAD
 {% include 'footer.html' %}
-=======
-{% include 'footer.html' %}
->>>>>>> 4125a83c59aff0074b94a6234156183b6d743ce2
