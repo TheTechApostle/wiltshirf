@@ -52,6 +52,7 @@ import io
 from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+import random, string
 
 def notify_payment_success(request, amount, reference):
     send_mail(
@@ -110,6 +111,22 @@ def contact(request):
     context= {'getAgent':getAgent}
     return render(request, 'contact.html', context)
 
+
+def gallery_view(request):
+    events = Event.objects.all()
+    selected_event_id = request.GET.get('event')
+    
+    if selected_event_id:
+        images = GalleryImage.objects.filter(event_id=selected_event_id)
+    else:
+        images = GalleryImage.objects.all()
+
+    return render(request, 'gallery.html', {
+        'events': events,
+        'images': images,
+        'selected_event_id': selected_event_id,
+    })
+
 @login_required(login_url='LoginUser')  # Ensure the login URL name is correct
 def createSlider(request):
     if request.method == "POST":
@@ -128,6 +145,9 @@ def clientProfile(request):
     user = request.user
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
+    is_referrer_user = is_referrer(user)
+
+    clientAll = None
 
     if is_admin_user:
         # Annotate each user with the number of purchased products
@@ -139,6 +159,14 @@ def clientProfile(request):
         clientAll = User.objects.annotate(property_count=Count('purchasedproduct')).filter(id=user.id)
         for user_obj in clientAll:
             user_obj.is_admin_user = False
+    
+    elif is_referrer_user:
+        groupReferrer =  Group.objects.get(name='Referrer')
+        if request.user in groupReferrer.user_set.all():
+            clientAll = User.objects.filter(id=request.user.id)
+        else:
+            clientAll = User.objects.none()
+        
 
     context = {
         'clients': clientAll,
@@ -213,6 +241,7 @@ def Dashboard(request):
     userFirstname = user.first_name
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
+    is_referrer_user = is_referrer
 
     # Initialize default values
     total_investment = 0
@@ -869,17 +898,22 @@ def register_client(request):
             # add to client group
             client_group, created =  Group.objects.get_or_create(name='client')
             user.groups.add(client_group)
+
             # Save profile
             ClientProfile.objects.create(
                 user=user,
                 phone=form.cleaned_data['phone'],
-                address=form.cleaned_data['address']
+                address=form.cleaned_data['address'],
+                referral_code=form.cleaned_data['referral_code']
             )
             messages.success(request, 'Account created successfully.')
             return redirect('LoginUser')
     else:
         form = ClientRegistrationForm()
     return render(request, 'register_client.html', {'form': form})
+
+
+
 
 def LoginUser(request):
     next_url = request.GET.get('next') or request.POST.get('next') or None
@@ -889,6 +923,10 @@ def LoginUser(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
+
+            if user.groups.filter(name="Referrer").exists():
+                return redirect("referral_dashboard")
+
             if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
                 return redirect(next_url)
             return redirect("Dashboard")
@@ -1638,7 +1676,7 @@ def PropertyTypeHome(request):
 
 # views.py
 
-@login_required
+@login_required(login_url="LoginUser")
 @require_GET
 def pay_with_wallet(request):
     try:
@@ -1711,14 +1749,14 @@ def pay_with_wallet(request):
 def is_admin(user):
     return user.is_staff or user.is_superuser
 
-@login_required
+@login_required(login_url="LoginUser")
 @user_passes_test(is_admin)
 def chat_dashboard(request):
     clients = User.objects.exclude(id=request.user.id)
     return render(request, 'Dashboard/chat.html', {'clients': clients})
 
 
-@login_required
+@login_required(login_url="LoginUser")
 @user_passes_test(is_admin)
 def chat_with_user(request, user_id):
     user =  request.user
@@ -1746,7 +1784,7 @@ def chat_with_user(request, user_id):
     })
 
 
-@login_required
+@login_required(login_url="LoginUser")
 def client_chat_view(request):
     user = request.user
     is_admin_user = is_admin(user)
@@ -1772,6 +1810,247 @@ def client_chat_view(request):
         'is_client':is_client_user,
         'is_admin':is_admin_user,
     })
+
+
+def generate_referral_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+def register_with_referral(request):
+    if request.method == 'POST':
+        form = UserWithReferralForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.save()
+            referral = generate_referral_code()
+            # Create referral record
+            WithshirfReferral.objects.create(
+                user=user,
+                referral_code=referral,
+                bank_name=form.cleaned_data['bank_name'],
+                account_number=form.cleaned_data['account_number'],
+                account_name=form.cleaned_data['account_name'],
+            )
+
+            # Add to "Referrer" group
+            ref_group, _ = Group.objects.get_or_create(name="Referrer")
+            user.groups.add(ref_group)
+            email = EmailMessage(
+                subject="📄 Withshire Developments Referral Code",
+                body=f"Dear {request.user.first_name},\n\nYour referral code is: {referral}\n\nThank you for joining Withshire Developments!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email],
+            )
+            email.send()
+            messages.success(request, 'Referral Code Created and Sent to your Mail')
+            login(request, user)
+            return redirect('referral_dashboard')  # replace with your dashboard URL
+    else:
+        form = UserWithReferralForm()
+
+    return render(request, 'register_referral.html', {'form': form})
+
+
+
+@login_required(login_url="LoginUser")
+def referral_dashboard(request):
+    referred_data = []
+    total_earning = Decimal(0)
+    total_referrals = 0
+
+    try:
+        # Get the referrer object for the logged-in user
+        referrer = WithshirfReferral.objects.get(user=request.user)
+
+        # Get all ClientProfiles that used this referral code
+        referred_users = ClientProfile.objects.filter(referral_code=referrer.referral_code)
+
+        for client in referred_users:
+            # Get all purchases and transactions by the referred client
+            user_purchases = PurchasedProduct.objects.filter(user=client.user)
+            user_transactions = Transaction.objects.filter(user=client.user, status='success')
+            print(user_transactions)
+
+            # Calculate totals using Decimal
+            total_purchase_amount = sum(Decimal(p.deposit) for p in user_purchases)
+            total_transaction_amount = sum(Decimal(t.amount) for t in user_transactions)
+
+            total_spent = total_transaction_amount * Decimal('0.05')
+            earning_from_user = total_spent   # 5% commission
+
+            referred_data.append({
+                'username': client.user.username,
+                'email': client.user.email,
+                'total_spent': total_spent,
+                'earning': earning_from_user,
+                'scheduled_payment_date': referrer.scheduled_payment_date
+            })
+
+        total_earning = sum(item['earning'] for item in referred_data)
+        total_referrals = referred_users.count()
+
+        # Save updated totals to the referral model
+        referrer.total_referrals = total_referrals
+        referrer.earnings = total_earning
+        referrer.save()
+
+    except WithshirfReferral.DoesNotExist:
+        referrer = None
+
+    context = {
+        'referrer': referrer,
+        'referred_data': referred_data,
+        'total_earning': total_earning,
+        'total_referrals': total_referrals,
+    }
+    return render(request, 'Dashboard/referral_dashboard.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)  # or any permission check you prefer
+def referrers_list(request):
+    referrers = WithshirfReferral.objects.all()
+
+    # Create a list of referrers and their referred client count
+    referrers_data = []
+    for ref in referrers:
+        client_count = ClientProfile.objects.filter(referral_code=ref.referral_code).count()
+        referrers_data.append({
+            'referrer': ref,
+            'client_count': client_count,
+            'scheduled_payment_date': ref.scheduled_payment_date,
+        })
+
+    return render(request, 'Dashboard/referrers_list.html', {'referrers_data': referrers_data})
+
+@login_required(login_url="LoginUser")
+@require_POST
+def pay_referrer(request, referrer_id):
+    referrer = get_object_or_404(WithshirfReferral, id=referrer_id)
+
+    if referrer.earnings <= 0:
+        messages.error(request, 'No earnings to pay.')
+        return redirect('referrers_list')
+
+    if referrer.is_paid:
+        messages.warning(request, 'This referrer has already been paid.')
+        return redirect('referrers_list')
+
+    # STEP 1: Get bank code
+    try:
+        bank_codes = get_all_bank_codes()
+    except Exception as e:
+        messages.error(request, f"Bank fetch failed: {str(e)}")
+        return redirect('referrers_list')
+
+    bank_name_input = referrer.bank_name.lower()
+    bank_code = None
+
+    # Try partial match
+    for name, code in bank_codes.items():
+        if bank_name_input in name:
+            bank_code = code
+            break
+
+    if not bank_code:
+        messages.error(request, f"Bank code not found for: {referrer.bank_name}")
+        return redirect('referrers_list')
+    
+    print("Available banks:", list(bank_codes.keys()))
+
+
+    # STEP 2: Create transfer recipient if not already created
+    if not referrer.recipient_code:
+        recipient_res = create_transfer_recipient(
+            referrer.account_name,
+            referrer.account_number,
+            bank_code
+        )
+        if recipient_res.get("status"):
+            referrer.recipient_code = recipient_res["data"]["recipient_code"]
+            referrer.save()
+        else:
+            messages.error(request, f"Error creating recipient: {recipient_res.get('message')}")
+            return redirect('referrers_list')
+
+    # STEP 3: Initiate transfer
+    transfer_res = initiate_transfer(
+        referrer.earnings,
+        f"Referral payout for {referrer.user.get_full_name()}",
+        referrer.recipient_code
+    )
+
+    if transfer_res.get("status"):
+        referrer.is_paid = True
+        referrer.paid_on = timezone.now()
+        referrer.earnings = 0
+        referrer.save()
+        email = EmailMessage(
+            subject="📄Wiltshire Referral Payment Update",
+            body="Please find attached the latest Payment Made to you",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=["wonderpaul242@gmail.com", request.user.email],
+        )
+        # email.attach('PropertyBalanceUpdate.docx', buffer.read(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        email.send()
+        messages.success(request, f"Successfully paid ₦{referrer.earnings} to {referrer.user.get_full_name()}.")
+    else:
+        messages.error(request, f"Payment failed: {transfer_res.get('message')}")
+
+    return redirect('referrers_list')
+
+
+
+def schedule_payment(request, referrer_id):
+    referrer = get_object_or_404(WithshirfReferral, id=referrer_id)
+
+    if request.method == 'POST':
+        date_str = request.POST.get('scheduled_payment_date')
+        if date_str:
+            from datetime import datetime
+            try:
+                referrer.scheduled_payment_date = datetime.fromisoformat(date_str)
+                referrer.save()
+                messages.success(request, f'Payment scheduled for {referrer.user.get_full_name()} on {date_str}')
+            except ValueError:
+                messages.error(request, 'Invalid date format.')
+        return redirect('referrers_list')
+
+    return redirect('referrers_list')
+
+
+PAYSTACK_BASE_URL = "https://api.paystack.co"
+
+headers = {
+    "Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}",
+    "Content-Type": "application/json",
+}
+
+
+def create_transfer_recipient(name, account_number, bank_code):
+    url = f"{PAYSTACK_BASE_URL}/transferrecipient"
+    data = {
+        "type": "nuban",
+        "name": name,
+        "account_number": account_number,
+        "bank_code": bank_code,
+        "currency": "NGN"
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    return response.json()
+
+
+def initiate_transfer(amount, reason, recipient_code):
+    url = f"{PAYSTACK_BASE_URL}/transfer"
+    data = {
+        "source": "balance",
+        "amount": int(amount * 100),  # Convert to kobo
+        "recipient": recipient_code,
+        "reason": reason
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    return response.json()
 
 
 # @csrf_exempt

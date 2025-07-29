@@ -1,0 +1,93 @@
+{% load static %}
+{% load customs_tags %}
+{% include 'Dashboard/header.html' %}
+
+
+<main class="app-main">
+  <!--begin::App Content Header-->
+    <div class="app-content-header">
+
+        <div class="container mt-5">
+            <h2 class="mb-4">All Referrers</h2>
+            {% if messages %}
+                    <div class="container m-1 alert alert-danger" style="padding:0">
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+            {% endif %}
+            
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Referrer Name</th>
+                        <th>Email</th>
+                        <th>Referral Code</th>
+                        <th>Total Referred Clients</th>
+                        <th>Total Earnings</th>
+                        <th>Payment Scheduled Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in referrers_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>{{ item.referrer.user.get_full_name }}</td>
+                        <td>{{ item.referrer.user.email }}</td>
+                        <td>{{ item.referrer.referral_code }}</td>
+                        <td>{{ item.client_count }}</td>
+                        <td>₦{{ item.referrer.earnings|floatformat:2 }}</td>
+                        <td>{{ item.scheduled_payment_date|date:"D, d M Y H:i"  }}</td>
+                        <td>
+                        <form action="{% url 'pay_referrer' item.referrer.id %}" method="POST" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm">Pay</button>
+                        </form>
+
+
+
+                            <!-- <a href="{% url 'schedule_payment' item.referrer.id %}" class="btn btn-primary btn-sm">Schedule Payment</a> -->
+                            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#scheduleModal{{ item.referrer.id }}">
+                                Schedule Payment
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center">No referrers found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% for item in referrers_data %}
+        <div class="modal fade" id="scheduleModal{{ item.referrer.id }}" tabindex="-1" aria-labelledby="modalLabel{{ item.referrer.id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <form method="post" action="{% url 'schedule_payment' item.referrer.id %}">
+            {% csrf_token %}
+            <div class="modal-content">
+                <div class="modal-header">
+                <h5 class="modal-title" id="modalLabel{{ item.referrer.id }}">Schedule Payment for {{ item.referrer.user.get_full_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                <label for="schedule_date{{ item.referrer.id }}" class="form-label">Select Date and Time</label>
+                <input type="datetime-local" name="scheduled_payment_date" id="schedule_date{{ item.referrer.id }}" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                <button type="submit" class="btn btn-success">Save</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+            </form>
+        </div>
+        </div>
+        {% endfor %}
+
+        </div>
+    </div>
+</main>
+{% include 'Dashboard/footer.html' %}

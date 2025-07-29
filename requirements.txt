@@ -1,13 +1,15 @@
 django
 django-browser-reload
-jazzmin
+django-jazzmin
 python-dotenv
-crispy_forms
+django-crispy-forms
 crispy-bootstrap4
 celery
 django-celery-beat
 django-celery-results
 report_lab
-# weasyprint
+weasyprint
 python-docx
+django-widget-tweaks
+
 

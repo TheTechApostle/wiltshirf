@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "django_browser_reload",
     "crispy_forms",
     "crispy_bootstrap4",
+    "widget_tweaks",
     'django.contrib.humanize',
 ]
 
@@ -89,7 +90,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'wonderpaul243@gmail.com'
 EMAIL_HOST_PASSWORD = 'cxuzngiwllihmayb'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-EMAIL_PORT = 465
+# EMAIL_PORT = 465
+EMAIL_PORT = 587
 EMAIL_USE_SSL = True
 EMAIL_USE_TLS = False
 

@@ -35,7 +35,12 @@ class PurchasedProductAdmin(admin.ModelAdmin):
         'formatted_balance',
         'date_added',
     )
-
+    list_filter = (
+        'user',
+        'property',
+        'method',
+        'date_added'
+    )
 
     def get_property_title(self, obj):
         return obj.property.title if obj.property else obj.title
@@ -68,3 +73,30 @@ class PurchasedProductTrashAdmin(admin.ModelAdmin):
     list_filter = ('user', 'method', 'date_removed')
 
 
+@admin.register(WithshirfReferral)
+class WithshirfReferralAdmin(admin.ModelAdmin):
+    list_display = ('user', 'referral_code', 'total_referrals', 'earnings', 'scheduled_payment_date','date_added')
+    list_filter = ('user__username', 'referral_code', 'total_referrals','earnings')
+
+
+class GalleryImageInline(admin.TabularInline):  # or admin.StackedInline
+    model = GalleryImage
+    extra = 1  # Number of empty forms to display
+    fields = ('title', 'image', 'uploaded_at')
+    readonly_fields = ('uploaded_at',)
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+    list_filter = ('name',)
+
+@admin.register(GalleryImage)
+class GalleryImageAmin(admin.ModelAdmin):
+    list_display = ('event', 'title', 'image', 'uploaded_at')
+    list_filter = ('event','title')
+
+    def image_tag(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" style="width: 100px; height: auto;" />', obj.image.url)
+        return "-"
+    image_tag.short_description = 'Preview'

@@ -7,10 +7,12 @@ urlpatterns = [
     path('about/', views.about, name="about"),
     path('services/', views.service, name="service"),
     path('contact/', views.contact, name="contact"),
+    path('gallery/', views.gallery_view, name='gallery'),
     path('properties/', views.property_lists, name='property_lists'),
     path('PropertyTypeHome/', views.PropertyTypeHome, name='PropertyTypeHome'),
     path('property_list/', views.property_list, name='property_list'),
     path('createSlider/', views.createSlider, name="createSlider"),
+    path('register-referral/', views.register_with_referral, name='register_with_referral'),
     # path('property_list/', views.property_list_view, name="property_list"),
     path('Dashboard/', views.Dashboard, name="Dashboard"),
     path('Dashboard/FormProperty', views.FormProperty, name="FormProperty"),
@@ -52,5 +54,10 @@ urlpatterns = [
     path('Dashboard/edit-profile/<int:user_id>/', views.editProfile, name='editProfile'),
     path('Dashboard/trasaction/save_purchased_product', views.save_purchased_product, name='save_purchased_product'),
     path('Dashboard/update-balances/', views.update_balances_view, name='update_balances'),
+    path('Dashboard/referral-dashboard/', views.referral_dashboard, name='referral_dashboard'),
+    path('Dashboard/referrers/', views.referrers_list, name='referrers_list'),
+    path('Dashboard/pay/<int:referrer_id>/', views.pay_referrer, name='pay_referrer'),
+    path('Dashboard/schedule-payment/<int:referrer_id>/', views.schedule_payment, name='schedule_payment'),
+    
     # path("api/slider/upload/", views.create_slider_api, name="slider_upload"),
 ]

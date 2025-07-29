@@ -551,12 +551,18 @@
                       <i class="bi bi-circle me-2"></i> View Property Location
                     </a>
                   </li>
-                  {% endif %}
+                  
                   <li class="nav-item">
                     <a href="{% url 'add_agent' %}" class="nav-link {% if request.resolver_match.url_name == 'add_agent' %}active{% endif %}">
                       <i class="bi bi-circle me-2"></i> View Property Plan
                     </a>
                   </li>
+                  <li class="nav-item">
+                    <a href="{% url 'referrers_list' %}" class="nav-link {% if request.resolver_match.url_name == 'add_agent' %}active{% endif %}">
+                      <i class="bi bi-circle me-2"></i> View Referrals
+                    </a>
+                  </li>
+                  {% endif %}
                   {% if is_client %}
                   <li class="nav-item">
                     <a href="{% url 'my_orders' %}" class="nav-link {% if request.resolver_match.url_name == 'my_orders' %}active{% endif %}">

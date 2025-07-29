@@ -6,30 +6,65 @@
 
         <!-- Header Start -->
         <div class="container-fluid header bg-white p-0">
-            <div class="row g-0 align-items-center flex-column-reverse flex-md-row">
-                <div class="col-md-6 p-5 mt-lg-5">
-                    <h1 class="display-5 mb-4 animate__animated animate__fadeIn">
-                      Discover Your <span class="text-primary">Dream Home</span> for Comfortable Living
-                    </h1>
-                    <p class="mb-4 pb-2 animate__animated animate__fadeIn">
-                      Explore beautiful homes tailored to meet your lifestyle. From modern designs to family-friendly neighborhoods, find the perfect place to call home.
-                    </p>
-                    <a href="{% url 'property_lists' %}" class="btn btn-primary py-3 px-5 me-3 animate__animated animate__fadeIn">
-                      Browse Listings
-                    </a>
-                  </div>
-                <div class="col-12 col-md-6 animated fadeIn">
-                    <div class="owl-carousel header-carousel">
-                        {% for x in getSliders %}
-                        <div class="owl-carousel-item">
-                            <img class="img-fluid mobilecorousel" src="{{ x.sliderImage.url }}" alt="Slider Image">
+           <div class="row g-0 align-items-center flex-column-reverse flex-md-row">
+              <!-- Left Column with Carousel -->
+              <div class="col-12 col-md-6 animated fadeIn">
+                  <div class="owl-carousel header-carousel text-only-carousel">
+                      <!-- Slide 1: Dream Home -->
+                      <div class="owl-carousel-item p-5">
+                          <h1 class="display-5 mb-4 animate__animated animate__fadeIn">
+                              Discover Your <span class="text-primary">Dream Home</span> for Comfortable Living
+                          </h1>
+                          <p class="mb-4 pb-2 animate__animated animate__fadeIn">
+                              Explore beautiful homes tailored to meet your lifestyle. From modern designs to family-friendly neighborhoods, find the perfect place to call home.
+                          </p>
+                          <a href="{% url 'property_lists' %}" class="btn btn-primary py-3 px-5 me-3 animate__animated animate__fadeIn">
+                              Browse Listings
+                          </a>
+                      </div>
 
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-            </div>
+                      <!-- Slide 2: Become a Referrer -->
+                      <div class="owl-carousel-item p-5">
+                          <h1 class="display-5 mb-4 animate__animated animate__fadeIn">
+                              <span class="text-primary">Earn While You Help</span> Others Find Homes
+                          </h1>
+                          <p class="mb-4 pb-2 animate__animated animate__fadeIn">
+                              Join our referral program and earn passive income for every successful recommendation. Simple, effective, and rewarding.
+                          </p>
+                          <a href="{% url 'register_with_referral' %}" class="btn btn-primary py-3 px-5 me-3 animate__animated animate__fadeIn">
+                              Become a Referrer
+                          </a>
+                      </div>
+
+                      <!-- Slide 3: N500 Investment -->
+                      <div class="owl-carousel-item p-5">
+                          <h1 class="display-5 mb-4 animate__animated animate__fadeIn">
+                              Start Your <span class="text-primary">N500 Daily Investment</span> Journey
+                          </h1>
+                          <p class="mb-4 pb-2 animate__animated animate__fadeIn">
+                              Build your future with as little as N500 a day. Accessible real estate investment for everyone — start small, dream big.
+                          </p>
+                          <a href="#" class="btn btn-primary py-3 px-5 me-3 animate__animated animate__fadeIn text-white">
+                              Start Investing
+                          </a>
+                      </div>
+                  </div>
+              </div>
+
+    <!-- Right Column: Slider Images from DB -->
+              <div class="col-md-6 p-5 mt-lg-5">
+                  {% if getSliders %}
+                  <div class="owl-carousel header-carousel">
+                      {% for x in getSliders %}
+                      <div class="owl-carousel-item">
+                          <img class="img-fluid rounded shadow mobilecorousel" src="{{ x.sliderImage.url }}" alt="Slider Image">
+                      </div>
+                      {% endfor %}
+                  </div>
+                  {% endif %}
+              </div>
+          </div>
+
         </div>
         <!-- Header End -->
 
@@ -331,7 +366,26 @@
             height: 250px;
           }
         }
+        .text-only-carousel .owl-nav {
+            display: none !important;
+          }
+
       </style>
+      <script>
+        $(document).ready(function () {
+            $('.text-only-carousel').owlCarousel({
+              items: 1,
+              loop: true,
+              autoplay: true,
+              autoplayTimeout: 6000,
+              dots: true,
+              nav: false, // ✅ disables navigation arrows
+              animateOut: 'fadeOut',
+              animateIn: 'fadeIn'
+            });
+          });
+
+      </script>
   
 </body>
 

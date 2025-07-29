@@ -1,6 +1,7 @@
 from django  import forms
 from .models import *
 from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import UserCreationForm
 
 class PropertyForm(forms.ModelForm):
     class Meta:
@@ -90,16 +91,24 @@ class SubscriptionPropertyPlanForm(forms.ModelForm):
 
 
 class ClientRegistrationForm(forms.ModelForm):
+    first_name = forms.CharField(max_length=30, required=True, label="First Name", widget=forms.TextInput(attrs={'class': 'form-control'}))
+    last_name = forms.CharField(max_length=30, required=True, label="Last Name", widget=forms.TextInput(attrs={'class': 'form-control'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control'}))
     email = forms.EmailField(widget=forms.EmailInput(attrs={'class': 'form-control'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class':'form-control'}))
     confirm_password = forms.CharField(widget=forms.PasswordInput(attrs={'class':'form-control'}))
+    referral_code = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        label="Referral Code (Optional)"
+    )
     phone = forms.CharField(max_length=15, widget=forms.NumberInput(attrs={'class':'form-control'}))
     address = forms.CharField(widget=forms.Textarea(attrs={'class':'form-control','rows':3}))
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['first_name','last_name','username', 'email', 'password']
+
 
     def clean(self):
         cleaned_data = super().clean()
@@ -124,3 +133,43 @@ class EditProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email']
+
+
+
+class UserWithReferralForm(UserCreationForm):
+    BANK_CHOICES = [
+        ('Access Bank', 'Access Bank'),
+        ('GTBank', 'GTBank'),
+        ('Zenith Bank', 'Zenith Bank'),
+        ('UBA', 'UBA'),
+        ('First Bank', 'First Bank'),
+        ('FCMB', 'FCMB'),
+        ('Kuda Bank', 'Kuda Bank'),
+        # Add more...
+    ]
+    first_name = forms.CharField(max_length=30, required=True, label="First Name")
+    last_name = forms.CharField(max_length=30, required=True, label="Last Name")
+    email = forms.EmailField(required=True)
+    CONFIRM_CHOICES = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
+
+    confirm = forms.ChoiceField(
+        label="Do you want to become a referrer?",
+        choices=CONFIRM_CHOICES,
+        widget=forms.RadioSelect,
+        required=True
+    )
+    bank_name = forms.ChoiceField(
+        choices=[('', 'Select your bank')] + BANK_CHOICES,
+        label="Bank Name",
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    account_number = forms.CharField(max_length=20)
+    account_name = forms.CharField(max_length=100)
+
+    class Meta:
+        model = User
+        fields = ['first_name','last_name','username', 'email', 'password1', 'password2']

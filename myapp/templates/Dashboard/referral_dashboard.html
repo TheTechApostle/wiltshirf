@@ -1,0 +1,84 @@
+{% load static %}
+{% load django_browser_reload %}
+{% include 'Dashboard/header.html' %}
+
+
+<main class="app-main">
+  <!--begin::App Content Header-->
+    <div class="app-content-header">
+        <div class="container mt-5">
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <h2 class="mb-3"> Referral Dashboard</h2>
+                    <div class="card shadow-sm p-4">
+                        <h4>Hello, <strong>{{ request.user.first_name|default:request.user.username }}</strong></h4>
+                        {% if referrer %}
+                            <p><strong>Referral Code:</strong> 
+                                <span class="badge bg-info text-dark">{{ referrer.referral_code }}</span>
+                            </p>
+                            <p><strong>Total Referrals:</strong> 
+                                <span class="badge bg-dark">{{ total_referrals }}</span>
+                            </p>
+                            <p><strong>Total Earnings:</strong> 
+                                <span class="badge bg-primary">₦{{ total_earning|floatformat:2 }}</span>
+                            </p>
+                        {% else %}
+                            <p class="text-danger">You are not registered as a referrer yet.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if referred_data %}
+            <div class="row">
+                <div class="col-md-12">
+                    <h5 class="mb-3">📋 Referred Users</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>User</th>
+                                    <th>Email</th>
+                                    <th>Total Spent</th>
+                                    <th>Commission Earned</th>
+                                    <th>Scheduled Payment</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for data in referred_data %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ data.username }}</td>
+                                    <td>{{ data.email }}</td>
+                                    <td>₦{{ data.total_spent|floatformat:2 }}</td>
+                                    <td class="text-danger fw-bold">₦{{ data.earning|floatformat:2 }}</td>
+                                    <td class="text-info fw-bold">
+                                        {% if data.scheduled_payment_date %}
+                                            {{ data.scheduled_payment_date|date:"D, d M Y H:i" }}
+                                        {% else %}
+                                            No Date Scheduled
+                                        {% endif %}
+                                    </td>
+                                    <td class="bg-dark text-white"><strong>{{ data.is_paid|yesno:"Yes,No" }}</strong></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="alert alert-warning text-center mt-4">
+                        You haven't referred any users yet.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</main>
+{% include 'Dashboard/footer.html' %}
