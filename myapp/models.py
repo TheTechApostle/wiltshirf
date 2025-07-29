@@ -410,6 +410,7 @@ class PurchasedProductTrash(models.Model):
 
 
 
+<<<<<<< HEAD
 # models.py
 
 class WithshirfReferral(models.Model):
@@ -434,6 +435,8 @@ class WithshirfReferral(models.Model):
 
 
 
+=======
+>>>>>>> 4125a83c59aff0074b94a6234156183b6d743ce2
 class Event(models.Model):
     name = models.CharField(max_length=100)
 
@@ -447,4 +450,8 @@ class GalleryImage(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+<<<<<<< HEAD
         return self.title
+=======
+        return self.title
+>>>>>>> 4125a83c59aff0074b94a6234156183b6d743ce2

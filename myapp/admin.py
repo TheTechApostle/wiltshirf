@@ -73,6 +73,7 @@ class PurchasedProductTrashAdmin(admin.ModelAdmin):
     list_filter = ('user', 'method', 'date_removed')
 
 
+<<<<<<< HEAD
 @admin.register(WithshirfReferral)
 class WithshirfReferralAdmin(admin.ModelAdmin):
     list_display = ('user', 'referral_code', 'total_referrals', 'earnings', 'scheduled_payment_date','date_added')
@@ -100,3 +101,14 @@ class GalleryImageAmin(admin.ModelAdmin):
             return format_html('<img src="{}" style="width: 100px; height: auto;" />', obj.image.url)
         return "-"
     image_tag.short_description = 'Preview'
+=======
+@admin.register(Event)
+class Event(admin.ModelAdmin):
+    list_display = ('name')
+    list_filter = ('name')
+
+@admin.register(GalleryImage)
+class Event(admin.ModelAdmin):
+    list_display = ('event', 'title', 'image', 'uploaded_at')
+    list_filter = ('event','title')
+>>>>>>> 4125a83c59aff0074b94a6234156183b6d743ce2
