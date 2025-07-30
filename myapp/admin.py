@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import *
+from django.utils.html import format_html
 # Register your models here.
 
 admin.site.register(SliderImages)
@@ -52,7 +53,13 @@ class PurchasedProductAdmin(admin.ModelAdmin):
 
 admin.site.register(Wallet)
 admin.site.register(WalletTransaction)
-admin.site.register(Message)
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in Message._meta.fields if field.name != 'id']
+    list_filter = [field.name for field in Message._meta.fields if field.name !='id']
+    search_fields = [field.name for field in Message._meta.fields if field.name !='id']
+
 admin.site.register(UploadedContract)
 
 @admin.register(SubscriptionPropertyPlan)
@@ -91,7 +98,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ('name',)
 
 @admin.register(GalleryImage)
-class GalleryImageAmin(admin.ModelAdmin):
+class GalleryImageAdmin(admin.ModelAdmin):
     list_display = ('event', 'title', 'image', 'uploaded_at')
     list_filter = ('event','title')
 
@@ -100,3 +107,8 @@ class GalleryImageAmin(admin.ModelAdmin):
             return format_html('<img src="{}" style="width: 100px; height: auto;" />', obj.image.url)
         return "-"
     image_tag.short_description = 'Preview'
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    list_display = ('email', 'subscribed_at')
+    list_filter = ('email', 'subscribed_at')

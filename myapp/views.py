@@ -53,6 +53,7 @@ from docx import Document
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import random, string
+from django.views.decorators.csrf import csrf_protect
 
 def notify_payment_success(request, amount, reference):
     send_mail(
@@ -233,6 +234,11 @@ def propertyList(request):
 
     return render(request, 'Dashboard/property_list.html', context)
 
+@login_required(login_url='LoginUser')
+@require_POST
+def mark_messages_as_read(request):
+    Message.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({'status': 'success'})
 
 @login_required(login_url='LoginUser')
 def Dashboard(request):
@@ -242,7 +248,7 @@ def Dashboard(request):
     is_client_user = is_client(user)
     is_admin_user = is_admin(user)
     is_referrer_user = is_referrer
-
+    
     # Initialize default values
     total_investment = 0
     to_balance = 0
@@ -252,7 +258,11 @@ def Dashboard(request):
     properties = Property.objects.none()  # Default empty queryset
     recent_payments = 0
     full_payment_history_url =0
-    if is_admin_user:
+    unread_count = 0
+    allMessage = []
+    unread_count = Message.objects.filter(recipient=request.user, is_read=False).count()
+    allMessage = Message.objects.filter(recipient=user).order_by('-timestamp')[:5]   
+    if is_admin_user:       
         recent_payments = Transaction.objects.all().order_by('-created_at')[:5]
         # Admin sees all properties
         properties = Property.objects.all().order_by('-date_added')[:7]
@@ -331,9 +341,13 @@ def Dashboard(request):
         'transactions': transactions,
         'chart_labels': labels,
         'chart_data': data,
+        'allMessage': allMessage,
+        'unread_count': unread_count,
     }
 
     return render(request, 'Dashboard/index.html', context)
+
+
 
 # autocreate wallet
 # @login_required(login_url="LoginUser")
@@ -408,6 +422,9 @@ def initiate_wallet_payment(request):
 @login_required
 @user_passes_test(is_admin)
 def wallet_history(request):
+    user = request.user    
+    is_client_user = is_client(user)
+    is_admin_user = is_admin(user)
     query = request.GET.get('q')
     users = User.objects.select_related('wallet').prefetch_related('wallettransaction_set')
 
@@ -420,7 +437,9 @@ def wallet_history(request):
 
     context = {
         'users': users,
-        'total_balance': total_balance
+        'total_balance': total_balance,
+        'is_admin':is_admin_user,
+        'is_client':is_client_user
     }
     return render(request, 'Dashboard/wallet_history.html', context)
 
@@ -1177,14 +1196,76 @@ def update_balances_view(request):
         buffer.seek(0)
 
         # Send email with attachment
+        # HTML-styled body
+        email_body = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+            body {
+                font-family: 'Segoe UI', sans-serif;
+                background-color: #f4f4f4;
+                padding: 30px;
+                color: #333;
+            }
+            .content {
+                background-color: #ffffff;
+                border-radius: 8px;
+                padding: 20px;
+                max-width: 600px;
+                margin: auto;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            }
+            h2 {
+                color: #2c3e50;
+                margin-bottom: 10px;
+            }
+            p {
+                font-size: 15px;
+                line-height: 1.6;
+            }
+            .footer {
+                margin-top: 30px;
+                font-size: 14px;
+                color: #888;
+            }
+            </style>
+        </head>
+        <body>
+            <div class="content">
+            <h2>📄 Property Balance Update</h2>
+            <p>Dear Client,</p>
+            <p>
+                Please find attached the latest <strong>balance update report</strong> in Word format from <em>Withshire Developments</em>.
+            </p>
+            <p>
+                If you have any questions, feel free to reply to this email.
+            </p>
+            <div class="footer">
+                Warm regards,<br>
+                <strong>The Withshire Developments Team</strong>
+            </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Create the email message
         email = EmailMessage(
             subject="📄 Property Balance Update - Withshire Developments",
-            body="Please find attached the latest balance update report in Word format.",
+            body=email_body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=["wonderpaul242@gmail.com", request.user.email],
         )
-        email.attach('PropertyBalanceUpdate.docx', buffer.read(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        email.send()
+
+        email.content_subtype = "html"  # Enables HTML formatting
+
+        # Attach the Word file (assuming `buffer` is a BytesIO object or file-like)
+        email.attach(
+            'PropertyBalanceUpdate.docx',
+            buffer.read(),
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
 
     messages.success(request, f"{updated_count} purchased products were updated.")
     return redirect('Dashboard')
@@ -1823,6 +1904,7 @@ def register_with_referral(request):
             user.email = form.cleaned_data['email']
             user.save()
             referral = generate_referral_code()
+
             # Create referral record
             WithshirfReferral.objects.create(
                 user=user,
@@ -1835,16 +1917,34 @@ def register_with_referral(request):
             # Add to "Referrer" group
             ref_group, _ = Group.objects.get_or_create(name="Referrer")
             user.groups.add(ref_group)
+
+            # Styled HTML email body
             email = EmailMessage(
                 subject="📄 Withshire Developments Referral Code",
-                body=f"Dear {request.user.first_name},\n\nYour referral code is: {referral}\n\nThank you for joining Withshire Developments!",
+                body=f"""
+                <div style="font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #333;">
+                    <p>Dear {user.email},</p>
+
+                    <p>Thank you for joining <strong>Withshire Developments</strong>!</p>
+
+                    <p>Your referral code is:</p>
+                    <h2 style="color: #007bff;">{referral}</h2>
+
+                    <p>You can share this code with others to start earning rewards.</p>
+
+                    <p style="margin-top: 20px;">Warm regards,<br>
+                    <strong>Withshire Developments Team</strong></p>
+                </div>
+                """,
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[user.email],
             )
+            email.content_subtype = "html"  # Render the body as HTML
             email.send()
+
             messages.success(request, 'Referral Code Created and Sent to your Mail')
             login(request, user)
-            return redirect('referral_dashboard')  # replace with your dashboard URL
+            return redirect('referral_dashboard')  # Replace with your actual dashboard URL
     else:
         form = UserWithReferralForm()
 
@@ -1852,8 +1952,11 @@ def register_with_referral(request):
 
 
 
+
 @login_required(login_url="LoginUser")
 def referral_dashboard(request):
+    user = request.user
+    is_referrer_user = is_referrer(user)
     referred_data = []
     total_earning = Decimal(0)
     total_referrals = 0
@@ -1901,6 +2004,7 @@ def referral_dashboard(request):
         'referrer': referrer,
         'referred_data': referred_data,
         'total_earning': total_earning,
+        'is_referrer':is_referrer_user,
         'total_referrals': total_referrals,
     }
     return render(request, 'Dashboard/referral_dashboard.html', context)
@@ -1985,13 +2089,26 @@ def pay_referrer(request, referrer_id):
         referrer.earnings = 0
         referrer.save()
         email = EmailMessage(
-            subject="📄Wiltshire Referral Payment Update",
-            body="Please find attached the latest Payment Made to you",
+            subject="📄 Wiltshire Referral Payment Update",
+            body="""
+            <div style="font-family: Arial, sans-serif; font-size: 15px; line-height: 1.6;">
+                <p>Dear Valued Partner,</p>
+
+                <p>We’re pleased to inform you that a payment has been made to you as part of your Wiltshire referral earnings.</p>
+
+                <p>Please find attached the latest payment details for your reference.</p>
+
+                <p style="margin-top: 20px;">Best regards,<br>
+                <strong>Wiltshire Developments Team</strong></p>
+            </div>
+            """,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=["wonderpaul242@gmail.com", request.user.email],
+            to=[request.user.email],
         )
-        # email.attach('PropertyBalanceUpdate.docx', buffer.read(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+
+        email.content_subtype = "html"  # This tells Django to treat the body as HTML
         email.send()
+
         messages.success(request, f"Successfully paid ₦{referrer.earnings} to {referrer.user.get_full_name()}.")
     else:
         messages.error(request, f"Payment failed: {transfer_res.get('message')}")
@@ -2081,3 +2198,80 @@ def gallery_view(request):
         'images': images,
         'selected_event_id': selected_event_id,
     })
+
+
+@csrf_protect # For simplicity; use proper CSRF token in production
+def subscribe_newsletter(request):
+    if request.method == "POST":
+        data = json.loads(request.body.decode("utf-8"))
+        email = data.get("email")
+
+        if not email:
+            return JsonResponse({"status": "error", "message": "Email is required."})
+
+        if NewsletterSubscriber.objects.filter(email=email).exists():
+            return JsonResponse({"status": "error", "message": "Email already subscribed."})
+
+        NewsletterSubscriber.objects.create(email=email)
+        # Send welcome/newsletter email
+        email_body = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f9f9f9;
+                color: #333;
+                padding: 20px;
+            }
+            .container {
+                background-color: #ffffff;
+                padding: 20px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            h2 {
+                color: #2c3e50;
+            }
+            p {
+                font-size: 16px;
+                line-height: 1.6;
+            }
+            .footer {
+                margin-top: 30px;
+                font-size: 14px;
+                color: #888;
+            }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+            <h2>Welcome to Withshire Developments</h2>
+            <p>Dear Subscriber,</p>
+            <p>
+                Thank you for subscribing to <strong>Withshire Developments</strong>!
+            </p>
+            <p>
+                📄 Please find attached the latest balance update report in Word format.
+            </p>
+            <p>Stay tuned for more updates and property news.</p>
+            <div class="footer">
+                Regards,<br/>
+                The Withshire Developments Team
+            </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        emailAlert = EmailMessage(
+            subject="📄 Withshire Developments Newsletter",
+            body=email_body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email],
+        )
+        emailAlert.content_subtype = "html"  # This is crucial for HTML formatting
+        emailAlert.send()
+        return JsonResponse({"status": "success", "message": "Subscribed successfully!"})
+    return JsonResponse({"status": "error", "message": "Invalid request"})

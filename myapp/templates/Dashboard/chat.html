@@ -153,7 +153,7 @@
           <a href="{% url 'chat_with_user' client.id %}" class="text-decoration-none text-white">
             <div class="user-item {% if recipient.id == client.id %}bg-primary{% endif %}">
               <i class="bi bi-person-circle me-2"></i>
-              {{ client.first_name|default:client.username }}
+              {{ client.get_full_name|default:client.username }}
             </div>
           </a>
         {% empty %}

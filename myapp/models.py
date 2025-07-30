@@ -343,7 +343,7 @@ class ClientProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=15)
     address = models.TextField()
-    referral_code  = models.CharField()
+    referral_code  = models.CharField(max_length=25)
     
 
     def __str__(self):
@@ -390,9 +390,14 @@ class Message(models.Model):
     recipient = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
     content = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['timestamp']
+
+    def __str__(self):
+        return f'{self.sender} to {self.recipient} at {self.timestamp}'
+    
 
 
 class PurchasedProductTrash(models.Model):
@@ -448,3 +453,12 @@ class GalleryImage(models.Model):
 
     def __str__(self):
         return self.title
+
+
+
+class NewsletterSubscriber(models.Model):
+    email = models.EmailField(unique=True)
+    subscribed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.email

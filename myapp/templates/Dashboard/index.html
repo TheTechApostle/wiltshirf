@@ -182,9 +182,9 @@
                                 </div>
                               </div>
                   
-                              <div class="ms-3">
+                              {% comment %} <div class="ms-3">
                                 <a href="{% url 'viewProperty' item.id %}" class="btn btn-sm btn-outline-primary">View</a>
-                              </div>
+                              </div> {% endcomment %}
                             </div>
                           </div>
                         {% endfor %}
@@ -194,7 +194,7 @@
                     {% endif %}
                     {% if is_admin %}
                       <div class="d-flex justify-content-center my-2">
-                        <a class="btn btn-sm btn-outline-primary" href="{% url 'my_orders' %}">View All Properties</a>
+                        <a class="btn btn-sm btn-outline-primary" href="{% url 'propertyList' %}">View All Properties</a>
                       </div>
                     {% endif %}
                     {% if is_client %}
